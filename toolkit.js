@@ -1133,21 +1133,22 @@ function createToolkit(){
 			var box = e.getBoundingClientRect();
 			var size = {width: box.width, height: box.height};
 			if (varg(arguments, 0, false)){
+				var style = window.getComputedStyle(e, null);
 				//	Add margin
 				size.width 
-					+= window.getComputedStyle('margin-left') 
-					+ window.getComputedStyle('margin-right');
+					+= style.getPropertyValue('margin-left') 
+					+ style.getPropertyValue('margin-right');
 				size.height 
-					+= window.getComputedStyle('margin-top') 
-					+ window.getComputedStyle('margin-bottom');
-				if (window.getComputedStyle('box-sizing') == 'border-box'){
+					+= style.getPropertyValue('margin-top') 
+					+ style.getPropertyValue('margin-bottom');
+				if (style.getPropertyValue('box-sizing') == 'border-box'){
 					//	Add padding and TODO: border
 					size.width 
-						+= window.getComputedStyle('padding-left') 
-						+ window.getComputedStyle('padding-right');
+						+= style.getPropertyValue('padding-left') 
+						+ style.getPropertyValue('padding-right');
 					size.height 
-						+= window.getComputedStyle('padding-top') 
-						+ window.getComputedStyle('padding-bottom');
+						+= style.getPropertyValue('padding-top') 
+						+ style.getPropertyValue('padding-bottom');
 				}
 			}
 			return size;
