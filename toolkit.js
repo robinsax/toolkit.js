@@ -34,15 +34,28 @@ function createToolkit(){
 	//	Load configuration
 	var config = {
 		templateContainer: '.tk-templates',
+		dataPrefix: 'tk',
+		globalTemplateFunctions: {}, 
+		bindFunction: function(){},
 		debug: false,
 		logElement: null
 	};
 	if (arguments.length > 0){
-		var ovr = arguments[1];
+		var ovr = arguments[0];
 		for (var entry in ovr){
 			config[entry] = ovr[entry];
 		}
 	}
+
+	//	Define attribute names
+	var ATTR_BIND = config.dataPrefix + '-bind',
+		ATTR_ONTO = config.dataPrefix + '-onto',
+		ATTR_VIEW_WITH = config.dataPrefix + '-via', // TODO: Rename
+		ATTR_SRC = config.dataPrefix + '-src',
+		ATTR_CALLBACK = config.dataPrefix + '-callback',
+		ATTR_EVENT = config.dataPrefix + '-event',
+		ATTR_ON = config.dataPrefix + '-on',
+		ATTR_TEMPLATE = config.dataPrefix + '-template';
 	
 	/* ## Debug logging (Extra) */
 	/*
@@ -204,7 +217,7 @@ function createToolkit(){
 	*/
 	varg.on = function(a){
 		return function(i, d){
-			return varg(a, i, d);
+			return varg(a, i, d, varg(arguments, 2, false));
 		}
 	}
 
@@ -229,31 +242,31 @@ function createToolkit(){
 			types = [types];
 		}
 		var m = -1;
-		iter(types, function(c){
+		for (var i = 0; i < types.length; i++){
 			var c = types[i];
 			if (c == null) {
 				//	Null check
 				if (o == null){
 					m = i;
-					return false;
+					break;
 				}
 			}
 			else if (typeof o == c){
 				//	Typeof check
 				m = i;
-				return false;
+				break;
 			}
 			else {
 				//	Class check
 				try {
 					if (o instanceof c){
 						m = i;
-						return false;
+						break;
 					}
 				}
 				catch (e){}
 			}
-		});
+		}
 		if (m == -1){
 			throw new TypeError('Incorrect parameter type ' + (typeof param) + ' (expected one of ' + types + ')');
 		}
@@ -360,8 +373,7 @@ function createToolkit(){
 			:label (Optional, default `'Debug'`) The label to use
 		*/
 		this.debug = function(){
-			console.log(varg(arguments, 0, 'Debug') + ':');
-			console.log(this);
+			console.log(varg(arguments, 0, 'Debug') + ':', this);
 			return this;
 		}
 
@@ -570,24 +582,24 @@ function createToolkit(){
 		this.equals = function(o){
 			switch(typeCheck(o, [Element, Array, ToolkitInstance])){
 				case 0:
-					return this.length == 1 && this.set[0] == o;
+					return self.length == 1 && self.set[0] == o;
 				case 2:
 					o = o.set;
 				case 1:
 					var d = false;
 					iter(o, function(e){
-						if (this.set.indexOf(e) == -1){
+						if (self.set.indexOf(e) == -1){
 							d = true;
 							return false;
 						}
 					});
-					iter(this.set, function(e){
+					iter(self.set, function(e){
 						if (o.indexOf(e) == -1){
 							d = true;
 							return false;
 						}
 					})
-					return !d && this.length == o.length;
+					return !d && self.length == o.length;
 			}
 		}
 
@@ -662,8 +674,9 @@ function createToolkit(){
 			if (arguments.length > 0){
 				var v = arguments[0];
 				this.iter(function(e, i){
-					e.value = val;
+					e.value = v;
 				}, false);
+				return this;
 			}
 			else {
 				return this.set[0].value;
@@ -869,11 +882,12 @@ function createToolkit(){
 				}, false);
 			}
 
-			switch (typeCheck(a, ['string', 'object'])){
+			switch (typeCheck(a, ['function', 'string', 'object'])){
 				case 0:
+				case 1:
 					setOne(a, arguments[1]);
 					break;
-				case 1:
+				case 2:
 					for (var k in a){
 						setOne(k, a[k]);
 					}
@@ -902,6 +916,7 @@ function createToolkit(){
 					l = l.splice(i, 1);
 				});
 			}, false);
+			return this;
 		}
 
 		/*
@@ -1013,10 +1028,12 @@ function createToolkit(){
 					e.iter(function(e_){
 						e_.remove();
 						self.set[0].appendChild(e_.set[0]);
+						config.bindFunction(e_);
 					});
 					return e;
 				case 1:
 					self.set[0].appendChild(e);
+					config.bindFunction(e);
 					return new ToolkitInstance(e, this);
 			}
 		}
@@ -1039,10 +1056,12 @@ function createToolkit(){
 					e.reverse().iter(function(e_){
 						e_.remove();
 						self.set[0].insertBefore(e_.set[0], self.set[0].firstChild);
+						config.bindFunction(e);
 					}).reverse();
 					return e;
 				case 1:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
+					config.bindFunction(e);
 					return new ToolkitInstance(e, this);
 			}
 		}
@@ -1082,7 +1101,7 @@ function createToolkit(){
 			if (arguments.length > 0){
 				var t = arguments[0];
 				this.iter(function(e, i){
-					e.textContent = resolve(text, e, i);
+					e.textContent = resolve(t, e, i);
 				}, false);
 				return this;
 			}
@@ -1188,6 +1207,7 @@ function createToolkit(){
 	*/
 	function MappedObject(obj, node, parent){
 		var self = this;
+		var funcs = parent._funcs; // TODO: Remove
 
 		var props = Object.getOwnPropertyNames(obj),
 			subtemplates = {};
@@ -1209,7 +1229,7 @@ function createToolkit(){
 			var d = {};
 			//	Collect all original properties
 			iter(props, function(n, i){
-				var v = this[n];
+				var v = self[n];
 				if (v instanceof MappedArray){
 					//	Extract subtemplate
 					v = v.extract();
@@ -1237,12 +1257,12 @@ function createToolkit(){
 				return [];
 			}
 
-			node.children('[tk-bind]').iter(function(e, i){
+			node.children('[' + ATTR_BIND + ']').iter(function(e, i){
 				//	Read binding parameters
-				var to = param(e, 'tk-bind'),
-					onto = param(e, 'tk-onto'),
-					viewWith = param(e, 'tk-view-with'),
-					callback = param(e, 'tk-callback');
+				var to = param(e, ATTR_BIND),
+					onto = param(e, ATTR_ONTO),
+					viewWith = param(e, ATTR_VIEW_WITH),
+					callback = param(e, ATTR_CALLBACK);
 				iter(to, function(t, j){
 					if (!prop(bindings, t)){
 						bindings[t] = [];
@@ -1281,14 +1301,14 @@ function createToolkit(){
 
 		//	Bind generally without worrying about
 		//	depth since subtemplates are gone
-		node.children('[tk-src]').on('keyup', function(e){
-			self[e.attr('tk-src')] = e.value();
+		node.children('[' + ATTR_SRC + ']').on('keyup', function(e){
+			self[e.attr(ATTR_SRC)] = e.value();
 		});
-		node.children('[tk-event]').on(function(e){
+		node.children('[' + ATTR_EVENT + ']').on(function(e){
 			//	Check if target event was specified
-			return e.is('[tk-on]') ? e.attr('tk-on') : 'click';
+			return e.is('[' + ATTR_ON + ']') ? e.attr(ATTR_ON) : 'click';
 		}, function(e, i){
-			funcs[e.attr('tk-event')](self, e, i);
+			funcs[e.attr(ATTR_EVENT)](self, e, i);
 		});
 
 		//	Realize a property binding
@@ -1300,25 +1320,28 @@ function createToolkit(){
 				//	TODO: Y? lol
 				return;
 			}
-			iter(bindings[p], function(b, i){
+			var bound = tk.prop(bindings, p, null);
+			if (bound == null){
+				//	No bindings on this property
+				return;
+			}
+			iter(bound, function(b, i){
 				if (v instanceof Array){
 					//	Subtemplate
 					self[p] = new MappedArray(v, subtemplates[p], b.e, funcs);
 				}
 				else {
 					//	Transform
-					if (b.viewWith != '-'){
-						v = funcs[b.viewWith](v);
-					}
+					var lv = b.viewWith != '-' ? funcs[b.viewWith](v, p) : v;
 					//	Place
 					if (b.onto == 'html'){
-						b.e.html(v);
+						b.e.html(lv);
 					}
 					else if (b.onto.startsWith('attr')){
-						b.e.attr(b.onto.split(':')[1], v);
+						b.e.attr(b.onto.split(':')[1], lv);
 					}
 					else {
-						throw BindParameterError('Invalid bind tk-onto="' + b.onto + '"');
+						throw BindParameterError('Invalid bind ' + ATTR_BIND + '="' + b.onto + '"');
 					}
 					//	Callback
 					if (b.callback != '-'){
@@ -1327,11 +1350,10 @@ function createToolkit(){
 				}
 			});
 		}
-
 		//	Create mapping
 		iter(props, function(p){
 			//	Define property p here
-			Object.defineProperty(self, a, (function(iv, a){
+			Object.defineProperty(self, p, (function(iv, p){
 				var v = iv;	//	Tightly-scoped value
 				return {
 					get: function(){
@@ -1344,12 +1366,12 @@ function createToolkit(){
 						}
 						v = n;
 						//	Update the view value
-						applyBind(a, v);
+						applyBind(p, v);
 					}
 				}
-			})(obj[a], a));
+			})(obj[p], p));
 			//	Apply the initial value
-			applyBind(a);
+			applyBind(p);
 		});
 	}
 
@@ -1366,7 +1388,15 @@ function createToolkit(){
 	function MappedArray(ary, template, target, funcs){
 		var self = this;
 
+		//	Add global template functions
+		iter(config.globalTemplateFunctions, function(n, f){
+			if (prop(funcs, n, null) == null){
+				funcs[n] = f;
+			}
+		});
+
 		this.length = 0;
+		this._funcs = funcs; // TODO: Remove
 		
 		//	Create a fake array-index-like property
 		function applyIndex(i, iv){
@@ -1397,7 +1427,7 @@ function createToolkit(){
 			while (this.length > 0){
 				this.remove(0);
 			}
-			iter(a, function(o){ this.push(o); });
+			iter(a, function(o){ self.push(o); });
 		}
 
 		/*
@@ -1423,12 +1453,13 @@ function createToolkit(){
 			::argspec value1, ..., valueN
 		*/
 		this.push = function(){
-			iter(arguments, function(v){
+			for (var i = 0; i < arguments.length; i++){
+				var v = arguments[i];
 				var node = template.copy();
 				applyIndex(self.length, new MappedObject(v, node, self));
 				self.length++;
 				target.append(node);
-			});	
+			}
 		}
 
 		/*
@@ -1506,11 +1537,11 @@ function createToolkit(){
 			on the element by property name
 	*/
 	function createElement(){
-		var varg = varg.on(arguments);
-		var e = document.createElement(varg(0, 'div'));
-		e.className = varg(1, '');
-		e.innerHTML = varg(2, '');
-		iter(varg(3, {}), function(a, v){
+		var v = varg.on(arguments);
+		var e = document.createElement(v(0, 'div'));
+		e.className = v(1, '');
+		e.innerHTML = v(2, '');
+		iter(v(3, {}), function(a, v){
 			e.setAttribute(a, v);
 		});
 		return new ToolkitInstance(e);
@@ -1532,6 +1563,7 @@ function createToolkit(){
 	*/
 	function request(url, method, data, success){
 		var failure = varg(arguments, 4, success);
+		var method = method.toUpperCase();
 
 		//	Just in case
 		if (data instanceof MappedObject || data instanceof MappedArray){
@@ -1546,12 +1578,29 @@ function createToolkit(){
 			}
 		}
 
-		r.open(method.toUpperCase(), url, true);
-		r.setRequestHeader('Content-Type', 'application/json');
+		var d;
+		if (method == 'GET'){
+			url += '?';
+			iter(data, function(a, v){
+				url += a + '=' + encodeURIComponent(v);
+			});
+			r.open(method, url, true);
+			d = '';
+		}
+		else if (method == 'POST'){
+			r.open('POST', url, true);
+			r.setRequestHeader('Content-Type', 'application/json');
+			d = JSON.stringify(data);
+		}
+		else {
+			//	TODO: Support more
+			throw 'Unsupported method ' + method;
+		}
 		iter(processors, function(p){
-			p(r);
+			p(r, d);
 		});
-		r.send(JSON.stringify(data));
+		r.send(d);
+		//	TODO: Logging here
 	}
 	/*
 		Add a request processor to modify outgoing
@@ -1583,8 +1632,8 @@ function createToolkit(){
 		if (wrap){
 			data = [data];
 		}
-		var e = arguments.length > 3 ? arguments[3] : {};
-		var m = new MappedArray(data, templateMap[template], target, e);
+		var m = new MappedArray(data, templateMap[template], 
+				target, varg(arguments, 3, {}));
 		return wrap ? m[0] : m;
 	}
 
@@ -1605,6 +1654,8 @@ function createToolkit(){
 		return new ToolkitInstance(obj);
 	}
 	//	Populate the object
+	tk.config = config;
+	tk.prop = prop;
 	tk.debug = debug;
 	tk.varg = varg;
 	tk.defer = defer;
@@ -1612,6 +1663,7 @@ function createToolkit(){
 	tk.e = createElement;
 	tk.request = request;
 	tk.mapping = mapping;
+	tk.templateMap = templateMap;
 	tk.init = init;
 	tk.types = {
 		ToolkitInstance: ToolkitInstance,
@@ -1622,11 +1674,12 @@ function createToolkit(){
 
 	function doInit(){
 		//	Remove and map templates
-		var container = tk(tk.config.templateContainer).remove();
-		var templates = container.children('[tk-template]', false)
+		var container = tk(config.templateContainer).remove();
+		var templates = container.children('[' + ATTR_TEMPLATE + ']', false)
 			.iter(function(e){
-				templateMap[e.attr('tk-template')] = e;
+				templateMap[e.attr(ATTR_TEMPLATE)] = e;
 			});
+		debug('Loaded templates:', templateMap);
 		
 		//	Call init. functions
 		iter(initFns, function(f){
