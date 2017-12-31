@@ -112,7 +112,7 @@ function createToolkit(){
 		:func The function to call at each iteration
 	*/
 	function iter(t, fn){
-		switch (typeCheck(t, [Array, 'object'])){
+		switch (typeCheck(t, [Array, 'object', 'number'])){
 			case 0:
 				for (var i = 0; i < t.length; i++){
 					if (fn(t[i], i) === false){
@@ -123,6 +123,13 @@ function createToolkit(){
 			case 1:
 				for (var k in t){
 					if (fn(k, t[k]) === false){
+						break;
+					}
+				}
+				return;
+			case 2:
+				for (var i = 0; i < t; i++){
+					if (fn(i) === false){
 						break;
 					}
 				}
@@ -1332,7 +1339,17 @@ function createToolkit(){
 				}
 				else {
 					//	Transform
-					var lv = b.viewWith != '-' ? funcs[b.viewWith](v, p) : v;
+					var lv = v;
+					if (b.viewWith != '-'){
+						if (b.viewWith.substring(0, 2) == '=>'){
+							//	Lambda viewWith, evaluate
+							//	TODO: Clean-up
+							lv = eval(b.viewWith.substring(2));
+						}
+						else {
+							lv = funcs[b.viewWith](v, p);
+						}
+					}
 					//	Place
 					if (b.onto == 'html'){
 						b.e.html(lv);
