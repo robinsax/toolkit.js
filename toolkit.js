@@ -1630,7 +1630,7 @@ function createToolkit(){
 
 		TODO: Better doc.
 	*/
-	function mapping(data, template, target){
+	function bind(data, template, target){
 		var t = typeof data;
 		if (t == 'string' || t == 'number' || t == 'boolean'){
 			return data;
@@ -1669,7 +1669,7 @@ function createToolkit(){
 	tk.iter = iter;
 	tk.e = createElement;
 	tk.request = request;
-	tk.mapping = mapping;
+	tk.bind = bind;
 	tk.templateMap = templateMap;
 	tk.init = init;
 	tk.types = {
