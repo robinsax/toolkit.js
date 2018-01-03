@@ -24,7 +24,7 @@ def main():
 		readme = f.read().replace('\n', '\n\t')
 	header = f'/*\n\t{readme}\n*/'
 	
-	with open('toolkit.min.js', 'w') as f:
+	with open('tk.min.js', 'w') as f:
 		f.write(f'{header}\n{response.text}')
 
 	print('Done')

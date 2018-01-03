@@ -1339,17 +1339,7 @@ function createToolkit(){
 				}
 				else {
 					//	Transform
-					var lv = v;
-					if (b.viewWith != '-'){
-						if (b.viewWith.substring(0, 2) == '=>'){
-							//	Lambda viewWith, evaluate
-							//	TODO: Clean-up
-							lv = eval(b.viewWith.substring(2));
-						}
-						else {
-							lv = funcs[b.viewWith](v, p);
-						}
-					}
+					var lv = b.viewWith != '-' ? funcs[b.viewWith](v, p) : v;
 					//	Place
 					if (b.onto == 'html'){
 						b.e.html(lv);
