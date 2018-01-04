@@ -50,7 +50,7 @@ function createToolkit(){
 	//	Define attribute names
 	var ATTR_BIND = config.dataPrefix + '-bind',
 		ATTR_ONTO = config.dataPrefix + '-onto',
-		ATTR_VIEW_WITH = config.dataPrefix + '-via', // TODO: Rename
+		ATTR_VIEW_WITH = config.dataPrefix + '-view-fn',
 		ATTR_SRC = config.dataPrefix + '-src',
 		ATTR_CALLBACK = config.dataPrefix + '-callback',
 		ATTR_EVENT = config.dataPrefix + '-event',
@@ -172,6 +172,19 @@ function createToolkit(){
 			return h;
 		}
 		return h ? o[p] : arguments[2];
+	}
+
+	/*	
+		Return a version of `prop()` bound to the
+		given object.
+	*/
+	prop.on = function(o){
+		return function(p){
+			if (arguments.length == 2){
+				return prop(p, arguments[1]);
+			}
+			return prop(p);
+		}
 	}
 
 	/*
