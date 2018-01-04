@@ -26,7 +26,7 @@ def main():
 	
 	with open('tk.min.js', 'w') as f:
 		f.write(f'{header}\n{response.text}')
-
+	
 	print('Done')
 	return 0
 

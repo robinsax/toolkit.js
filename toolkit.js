@@ -37,8 +37,7 @@ function createToolkit(){
 		dataPrefix: 'tk',
 		globalTemplateFunctions: {}, 
 		bindFunction: function(){},
-		debug: false,
-		logElement: null
+		debug: false
 	};
 	if (arguments.length > 0){
 		var ovr = arguments[0];
@@ -66,9 +65,6 @@ function createToolkit(){
 	function debug(){
 		if (config.debug){
 			console.log.apply(null, arguments);
-			if (config.logElement != null){
-
-			}
 		}
 	}
 	/*
@@ -1475,7 +1471,7 @@ function createToolkit(){
 		this.push = function(){
 			for (var i = 0; i < arguments.length; i++){
 				var v = arguments[i];
-				var node = template.copy();
+				var node = template.copy().attr('tk-template', null);
 				applyIndex(self.length, new MappedObject(v, node, self));
 				self.length++;
 				target.append(node);
@@ -1696,7 +1692,7 @@ function createToolkit(){
 	function doInit(){
 		//	Remove and map templates
 		var container = tk(config.templateContainer).remove();
-		var templates = container.children('[' + ATTR_TEMPLATE + ']', false)
+		container.children('[' + ATTR_TEMPLATE + ']', false)
 			.iter(function(e){
 				templates[e.attr(ATTR_TEMPLATE)] = e;
 			});
@@ -1705,7 +1701,7 @@ function createToolkit(){
 		//	Call init. functions
 		iter(initFns, function(f){
 			f();
-		})
+		});
 	}
 	
 	//	Initialize or wait
