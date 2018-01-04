@@ -1672,6 +1672,7 @@ function createToolkit(){
 	tk.bind = bind;
 	tk.templateMap = templateMap;
 	tk.init = init;
+	tk.typeCheck = typeCheck;
 	tk.types = {
 		ToolkitInstance: ToolkitInstance,
 		MappedObject: MappedObject,
