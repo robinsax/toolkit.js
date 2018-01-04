@@ -37,7 +37,7 @@
 			//	When the DOM is loaded, map it to the template
 			var mappedData;
 			tk.init(function(){
-				mappedData = tk.map(data, 'demo-thread', tk('.page-area'), events);
+				mappedData = tk.map(data, 'thread', tk('.page-area'), events);
 			});
 		</script>
 		
@@ -56,8 +56,8 @@
 	</head>
 	<body>
 		<div class="hello-templates">
-			<div class="thread" tk-template="demo-thread">
-				<h2 tk-bind="title"></h2>
+			<div class="thread" tk-template="thread">
+				<h2 tk-bind="title" tk-view-fn="<lambda: v.toUpperCase()>"></h2>
 				<p tk-bind="text"></p>
 				<ul tk-bind="comments">
 					<li>

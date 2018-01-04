@@ -1268,7 +1268,13 @@ function createToolkit(){
 					if (remove){
 						e.attr(a, null);
 					}
-					return v.split(/\s+/g);
+					var found = v.match(/(?:(?:<.*?>)|[^\s]+)(?:\s+|$)/g);
+					iter(found, function(s, i){
+						if (s.indexOf('<') == 0){
+							found[i] = s.substring(1, s.length - 1);
+						}
+					});
+					return found;
 				}
 				return [];
 			}
@@ -1331,8 +1337,8 @@ function createToolkit(){
 		function applyBind(p){
 			//	On value change new value is specified since
 			//	it hasn't applied yet
-			var v = varg(arguments, 1, self[p]);
-			if (v instanceof MappedArray){
+			var value = varg(arguments, 1, self[p]);
+			if (value instanceof MappedArray){
 				//	TODO: Y? lol
 				return;
 			}
@@ -1342,26 +1348,37 @@ function createToolkit(){
 				return;
 			}
 			iter(bound, function(b, i){
-				if (v instanceof Array){
+				if (value instanceof Array){
 					//	Subtemplate
-					self[p] = new MappedArray(v, subtemplates[p], b.e, funcs);
+					self[p] = new MappedArray(value, subtemplates[p], b.e, funcs);
 				}
 				else {
 					//	Transform
-					var lv = b.viewWith != '-' ? funcs[b.viewWith](v, p) : v;
+					var asViewed = value;
+					if  (b.viewWith != '-'){
+						if (b.viewWith.indexOf('lambda:') > -1){
+							//	Evaluate lambda
+							var v = value;
+							console.log(b.viewWith);
+							asViewed = eval('(function(){ return ' + b.viewWith.substring(7) + ' })();');
+						}
+						else {
+							asViewed = funcs[b.viewWith](value, p);
+						}
+					}
 					//	Place
 					if (b.onto == 'html'){
-						b.e.html(lv);
+						b.e.html(asViewed);
 					}
-					else if (b.onto.startsWith('attr')){
-						b.e.attr(b.onto.split(':')[1], lv);
+					else if (b.onto.indexOf('lambda:') > -1){
+						b.e.attr(b.onto.split(':')[1], asViewed);
 					}
 					else {
 						throw BindParameterError('Invalid bind ' + ATTR_BIND + '="' + b.onto + '"');
 					}
 					//	Callback
 					if (b.callback != '-'){
-						funcs[b.callback](v);
+						funcs[b.callback](value);
 					}
 				}
 			});
