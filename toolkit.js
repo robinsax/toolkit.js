@@ -1622,7 +1622,7 @@ function createToolkit(){
 		return tk;
 	}
 
-	var templateMap = {};
+	var templates = {};
 	/*
 		Create an return a live mapping between `data`,
 		and it's imposition on `template`, inserted as
@@ -1630,7 +1630,7 @@ function createToolkit(){
 
 		TODO: Better doc.
 	*/
-	function bind(data, template, target){
+	function map(data, template, target){
 		var t = typeof data;
 		if (t == 'string' || t == 'number' || t == 'boolean'){
 			return data;
@@ -1639,7 +1639,7 @@ function createToolkit(){
 		if (wrap){
 			data = [data];
 		}
-		var m = new MappedArray(data, templateMap[template], 
+		var m = new MappedArray(data, templates[template], 
 				target, varg(arguments, 3, {}));
 		return wrap ? m[0] : m;
 	}
@@ -1669,8 +1669,8 @@ function createToolkit(){
 	tk.iter = iter;
 	tk.e = createElement;
 	tk.request = request;
-	tk.bind = bind;
-	tk.templateMap = templateMap;
+	tk.map = map;
+	tk.templates = templates;
 	tk.init = init;
 	tk.typeCheck = typeCheck;
 	tk.types = {
@@ -1685,9 +1685,9 @@ function createToolkit(){
 		var container = tk(config.templateContainer).remove();
 		var templates = container.children('[' + ATTR_TEMPLATE + ']', false)
 			.iter(function(e){
-				templateMap[e.attr(ATTR_TEMPLATE)] = e;
+				templates[e.attr(ATTR_TEMPLATE)] = e;
 			});
-		debug('Loaded templates:', templateMap);
+		debug('Loaded templates:', templates);
 		
 		//	Call init. functions
 		iter(initFns, function(f){
