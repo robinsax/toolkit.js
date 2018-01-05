@@ -58,7 +58,7 @@
 	<body>
 		<div class="hello-templates">
 			<div class="thread" tk-template="thread">
-				<h2 tk-bind="title type" tk-view-fn="<lambda: v.toUpperCase()>" tk-onto="html attr:class"></h2>
+				<h2 tk-bind="type title" tk-view-fn="- <lambda: v.toUpperCase()>" tk-onto="attr:class"></h2>
 				<p tk-bind="text"></p>
 				<ul tk-bind="comments">
 					<li>

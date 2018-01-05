@@ -189,15 +189,17 @@ function createToolkit(){
 	/*
 		Call a function later.
 
-		Note: *Just an alias for setTimeout*.
-
-		::argspec func, milliseconds
+		::argspec func, milliseconds, initial
 		:func The function to call
 		:milliseconds The timeout before the function is
 			called, in milliseconds
+		:initial Whether to call the function now, too
 	*/
 	function defer(fn, t){
 		setTimeout(fn, t);
+		if (varg(arguments, 2, false)){
+			fn();
+		}
 	}
 
 	/* ## Variable argument utilities (Extra) */
