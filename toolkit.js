@@ -177,9 +177,9 @@ function createToolkit(){
 	prop.on = function(o){
 		return function(p){
 			if (arguments.length == 2){
-				return prop(p, arguments[1]);
+				return prop(o, p, arguments[1]);
 			}
-			return prop(p);
+			return prop(o, p);
 		}
 	}
 
@@ -1359,7 +1359,6 @@ function createToolkit(){
 						if (b.viewWith.indexOf('lambda:') > -1){
 							//	Evaluate lambda
 							var v = value;
-							console.log(b.viewWith);
 							asViewed = eval('(function(){ return ' + b.viewWith.substring(7) + ' })();');
 						}
 						else {
@@ -1370,11 +1369,11 @@ function createToolkit(){
 					if (b.onto == 'html'){
 						b.e.html(asViewed);
 					}
-					else if (b.onto.indexOf('lambda:') > -1){
+					else if (b.onto.indexOf('attr:') > -1){
 						b.e.attr(b.onto.split(':')[1], asViewed);
 					}
 					else {
-						throw BindParameterError('Invalid bind ' + ATTR_BIND + '="' + b.onto + '"');
+						throw new BindParameterError('Invalid bind ' + ATTR_BIND + '="' + b.onto + '"');
 					}
 					//	Callback
 					if (b.callback != '-'){
