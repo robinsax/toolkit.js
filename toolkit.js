@@ -202,6 +202,19 @@ function createToolkit(){
 		}
 	}
 
+	//	TODO: Doc.
+	function repeat(fn, t){
+		var i = setInterval(fn, t);
+		if (varg(arguments, 2, false)){
+			fn();
+		}
+		return {
+			stop: function(){
+				clearInterval(i);
+			}
+		}
+	}
+
 	/* ## Variable argument utilities (Extra) */
 	/*
 		Return the argument at index `i` or a default
@@ -1697,6 +1710,7 @@ function createToolkit(){
 	tk.debug = debug;
 	tk.varg = varg;
 	tk.defer = defer;
+	tk.repeat = repeat;
 	tk.iter = iter;
 	tk.e = createElement;
 	tk.request = request;
