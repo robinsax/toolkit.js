@@ -1274,8 +1274,9 @@ function createToolkit(){
 					var found = v.match(/(?:(?:<.*?>)|[^\s]+)(?:\s+|$)/g);
 					iter(found, function(s, i){
 						if (s.indexOf('<') == 0){
-							found[i] = s.substring(1, s.length - 1);
+							s = s.substring(1, s.length - 1);
 						}
+						found[i] = s.trim();
 					});
 					return found;
 				}
@@ -1373,14 +1374,14 @@ function createToolkit(){
 						b.e.html(asViewed);
 					}
 					else if (b.onto.indexOf('attr:') > -1){
-						b.e.attr(b.onto.split(':')[1], asViewed);
+						b.e.attr(b.onto.substring(5), asViewed);
 					}
 					else {
 						throw new BindParameterError('Invalid bind ' + attrNames.bind + '="' + b.onto + '"');
 					}
 					//	Callback
 					if (b.callback != '-'){
-						funcs[b.callback](value);
+						funcs[b.callback](asViewed);
 					}
 				}
 			});
@@ -1715,7 +1716,7 @@ function createToolkit(){
 		container.children('[' + attrNames.template + ']', false)
 			.iter(function(e){
 				templates[e.attr(attrNames.template)] = e;
-			});
+			}).attr(attrNames.template, null);
 		debug('Loaded templates:', templates);
 		
 		//	Call init. functions
