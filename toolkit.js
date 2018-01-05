@@ -47,14 +47,17 @@ function createToolkit(){
 	}
 
 	//	Define attribute names
-	var ATTR_BIND = config.dataPrefix + '-bind',
-		ATTR_ONTO = config.dataPrefix + '-onto',
-		ATTR_VIEW_WITH = config.dataPrefix + '-view-fn',
-		ATTR_SRC = config.dataPrefix + '-src',
-		ATTR_CALLBACK = config.dataPrefix + '-callback',
-		ATTR_EVENT = config.dataPrefix + '-event',
-		ATTR_ON = config.dataPrefix + '-on',
-		ATTR_TEMPLATE = config.dataPrefix + '-template';
+	function makeDefault(ext){ return config.dataPrefix + '-' + ext; }
+	var attrNames = {
+		bind: makeDefault('bind'),
+		onto: makeDefault('onto'),
+		viewFn: makeDefault('view-fn'),
+		src: makeDefault('src'),
+		callback: makeDefault('callback'),
+		event: makeDefault('event'),
+		on: makeDefault('on'),
+		template: makeDefault('template')
+	}
 	
 	/* ## Debug logging (Extra) */
 	/*
@@ -1279,12 +1282,12 @@ function createToolkit(){
 				return [];
 			}
 
-			node.children('[' + ATTR_BIND + ']').iter(function(e, i){
+			node.children('[' + attrNames.bind + ']').iter(function(e, i){
 				//	Read binding parameters
-				var to = param(e, ATTR_BIND),
-					onto = param(e, ATTR_ONTO),
-					viewWith = param(e, ATTR_VIEW_WITH),
-					callback = param(e, ATTR_CALLBACK);
+				var to = param(e, attrNames.bind),
+					onto = param(e, attrNames.onto),
+					viewWith = param(e, attrNames.viewFn),
+					callback = param(e, attrNames.callback);
 				iter(to, function(t, j){
 					if (!prop(bindings, t)){
 						bindings[t] = [];
@@ -1323,14 +1326,14 @@ function createToolkit(){
 
 		//	Bind generally without worrying about
 		//	depth since subtemplates are gone
-		node.children('[' + ATTR_SRC + ']').on('keyup', function(e){
-			self[e.attr(ATTR_SRC)] = e.value();
+		node.children('[' + attrNames.src + ']').on('keyup', function(e){
+			self[e.attr(attrNames.src)] = e.value();
 		});
-		node.children('[' + ATTR_EVENT + ']').on(function(e){
+		node.children('[' + attrNames.event + ']').on(function(e){
 			//	Check if target event was specified
-			return e.is('[' + ATTR_ON + ']') ? e.attr(ATTR_ON) : 'click';
+			return e.is('[' + attrNames.on + ']') ? e.attr(attrNames.on) : 'click';
 		}, function(e, i){
-			funcs[e.attr(ATTR_EVENT)](self, e, i);
+			funcs[e.attr(attrNames.event)](self, e, i);
 		});
 
 		//	Realize a property binding
@@ -1373,7 +1376,7 @@ function createToolkit(){
 						b.e.attr(b.onto.split(':')[1], asViewed);
 					}
 					else {
-						throw new BindParameterError('Invalid bind ' + ATTR_BIND + '="' + b.onto + '"');
+						throw new BindParameterError('Invalid bind ' + attrNames.bind + '="' + b.onto + '"');
 					}
 					//	Callback
 					if (b.callback != '-'){
@@ -1698,6 +1701,7 @@ function createToolkit(){
 	tk.templates = templates;
 	tk.init = init;
 	tk.typeCheck = typeCheck;
+	tk.attrNames = attrNames;
 	tk.types = {
 		ToolkitInstance: ToolkitInstance,
 		MappedObject: MappedObject,
@@ -1708,9 +1712,9 @@ function createToolkit(){
 	function doInit(){
 		//	Remove and map templates
 		var container = tk(config.templateContainer).remove();
-		container.children('[' + ATTR_TEMPLATE + ']', false)
+		container.children('[' + attrNames.template + ']', false)
 			.iter(function(e){
-				templates[e.attr(ATTR_TEMPLATE)] = e;
+				templates[e.attr(attrNames.template)] = e;
 			});
 		debug('Loaded templates:', templates);
 		
