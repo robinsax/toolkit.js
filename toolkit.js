@@ -1057,15 +1057,26 @@ function createToolkit(){
 			:element The element or `ToolkitInstance` to append
 		*/
 		this.append = function(e){
-			switch (typeCheck(e, [ToolkitInstance, Element])){
+			switch (typeCheck(e, [Array, ToolkitInstance, Element])){
 				case 0:
-					e.iter(function(e_){
-						e_.remove();
-						self.set[0].appendChild(e_.set[0]);
-						config.bindFunction(e_);
+					//	TODO: Efficiency
+					var set = [];
+					iter(e, function(g){
+						var tki = self.append(g);
+						tki.iter(function(h){
+							set.push(h.set[0]);
+						});
 					});
-					return e;
+					return new ToolkitInstance(set, this);
 				case 1:
+					e.iter(function(g){
+						g.remove();
+						self.set[0].appendChild(g.set[0]);
+						config.bindFunction(g);
+					});
+					e.parent = this;
+					return e;
+				case 2:
 					self.set[0].appendChild(e);
 					config.bindFunction(e);
 					return new ToolkitInstance(e, this);
@@ -1085,15 +1096,25 @@ function createToolkit(){
 			:element The element or `ToolkitInstance` to append
 		*/
 		this.prepend = function(e){
-			switch (typeCheck(e, [ToolkitInstance, Element])){
+			switch (typeCheck(e, [Array, ToolkitInstance, Element])){
 				case 0:
-					e.reverse().iter(function(e_){
-						e_.remove();
-						self.set[0].insertBefore(e_.set[0], self.set[0].firstChild);
+					//	TODO: Efficiency
+					var set = [];
+					iter(e, function(g){
+						var tki = self.prepend(g);
+						tki.iter(function(h){
+							set.push(h.set[0]);
+						});
+					});
+					return new ToolkitInstance(set, this);
+				case 1:
+					e.reverse().iter(function(g){
+						g.remove();
+						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
 						config.bindFunction(e);
 					}).reverse();
 					return e;
-				case 1:
+				case 2:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
 					config.bindFunction(e);
 					return new ToolkitInstance(e, this);
