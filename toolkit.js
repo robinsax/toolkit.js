@@ -1121,6 +1121,11 @@ function createToolkit(){
 			}
 		}
 
+		//	TODO: Doc
+		this.tag = function(){
+			return this.set[0].tagName;
+		}
+
 		/*
 			Get the HTML content of the first selected
 			element, or set the HTML content of each selected
