@@ -34,7 +34,7 @@ function createToolkit(){
 	if (!Window){
 		var Window = function(){};
 	}
-	
+
 	//	Load configuration
 	var config = {
 		templateContainer: '.tk-templates',
@@ -393,7 +393,7 @@ function createToolkit(){
 			}
 		})();
 		//	Parent for back()
-		this.parent = varg(arguments, 1, null);
+		this.backP = varg(arguments, 1, null);
 		//	Cardinality properties
 		this.length = this.set.length;
 		this.empty = this.length == 0;
@@ -429,10 +429,10 @@ function createToolkit(){
 			```
 		*/
 		this.back = function(){
-			if (this.parent == null){
+			if (this.backP == null){
 				throw ChainingError('Called back() without parent');
 			}
-			return this.parent;
+			return this.backP;
 		}
 
 		/*
@@ -1297,7 +1297,6 @@ function createToolkit(){
 		var props = Object.getOwnPropertyNames(obj),
 			subtemplates = {};
 		this.node = node;
-		this.parent = parent;
 		
 		/*
 			Remove this object from its parent array.
