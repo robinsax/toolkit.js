@@ -30,6 +30,8 @@ function createToolkit(){
 	if (!Element.prototype.matches){
 		Element.prototype.matches = Element.prototype.msMatchesSelector;
 	}
+	//	Placeholder Window for non-browser environs
+	Window = Window || function(){};
 
 	//	Load configuration
 	var config = {
