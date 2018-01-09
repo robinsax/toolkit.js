@@ -31,8 +31,10 @@ function createToolkit(){
 		Element.prototype.matches = Element.prototype.msMatchesSelector;
 	}
 	//	Placeholder Window for non-browser environs
-	Window = Window || function(){};
-
+	if (!Window){
+		var Window = function(){};
+	}
+	
 	//	Load configuration
 	var config = {
 		templateContainer: '.tk-templates',
