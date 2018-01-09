@@ -562,6 +562,8 @@ function createToolkit(){
 				or only immediate ones
 		*/
 		this.children = function(){
+			//	TODO: Allow children(false) for shallow any
+			//	TODO: Vargify
 			var l = [], s = arguments.length > 0 ? arguments[0] : '*',
 				d = arguments.length > 1 ? arguments[1] : true;
 			if (d){
@@ -1100,6 +1102,7 @@ function createToolkit(){
 				case 0:
 					//	TODO: Efficiency
 					var set = [];
+					e = e.splice(0).reverse();
 					iter(e, function(g){
 						var tki = self.prepend(g);
 						tki.iter(function(h){
@@ -1111,8 +1114,8 @@ function createToolkit(){
 					e.reverse().iter(function(g){
 						g.remove();
 						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-						config.bindFunction(e);
-					}).reverse();
+						config.bindFunction(g);
+					});
 					return e;
 				case 2:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
@@ -1124,6 +1127,24 @@ function createToolkit(){
 		//	TODO: Doc
 		this.tag = function(){
 			return this.set[0].tagName;
+		}
+
+		//	TODO: Doc and move
+		this.next = function(){
+			var n = this.set[0].nextElementSibling;
+			if (n == null){
+				n = [];
+			}
+			return new ToolkitInstance(n, this);
+		}
+
+		//	TODO: Doc and move
+		this.prev = function(){
+			var n = this.set[0].previousElementSibling;
+			if (n == null){
+				n = [];
+			}
+			return new ToolkitInstance(n, this);
 		}
 
 		/*
@@ -1772,7 +1793,9 @@ function createToolkit(){
 		doInit();
 	}
 	else {
-		window.addEventListener('DOMContentLoaded', doInit);
+		if (window){
+			window.addEventListener('DOMContentLoaded', doInit);
+		}
 	}
 	return tk;
 }

@@ -25,20 +25,17 @@
 				}
 			];
 
-			//	Define your events
-			var events = {
-				'add_comment': function(mapping, e){
-					var comment = e.parent().children('input[type="text"]').value();
-					mapping.comments.push({
-						'content': comment
-					});
-				}
-			}
-
 			//	When the DOM is loaded, map it to the template
 			var mappedData;
 			tk.init(function(){
-				mappedData = tk.map(data, 'thread', tk('.page-area'), events);
+				mappedData = tk.map(data, 'thread', tk('.page-area'), {
+					'add_comment': function(mapping, e){
+						var comment = e.parent().children('input[type="text"]').value();
+						mapping.comments.push({
+							'content': comment
+						});
+					}
+				});
 			});
 		</script>
 		
