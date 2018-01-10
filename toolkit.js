@@ -430,7 +430,7 @@ function createToolkit(){
 		*/
 		this.back = function(){
 			if (this.backP == null){
-				throw ChainingError('Called back() without parent');
+				throw new ChainingError('Called back() without parent');
 			}
 			return this.backP;
 		}
@@ -1080,7 +1080,7 @@ function createToolkit(){
 						self.set[0].appendChild(g.set[0]);
 						config.bindFunction(g);
 					});
-					e.parent = this;
+					e.backP = this;
 					return e;
 				case 2:
 					self.set[0].appendChild(e);
@@ -1120,6 +1120,7 @@ function createToolkit(){
 						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
 						config.bindFunction(g);
 					});
+					e.backP = this;
 					return e;
 				case 2:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
@@ -1640,8 +1641,8 @@ function createToolkit(){
 	function createElement(){
 		var v = varg.on(arguments);
 		var e = document.createElement(v(0, 'div'));
-		e.className = v(1, '');
-		e.innerHTML = v(2, '');
+		e.className = v(1, '', true);
+		e.innerHTML = v(2, '', true);
 		iter(v(3, {}), function(a, v){
 			e.setAttribute(a, v);
 		});
