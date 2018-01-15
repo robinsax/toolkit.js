@@ -146,7 +146,10 @@ function createToolkit(){
 		typeCheck(list, [Array, MappedArray]);
 		var compr = [];
 		for (var i = 0; i < list.length; i++){
-			compr.push(transformFn(list[i], i));
+			var val = transformFn(list[i], i);
+			if (val !== undefined){
+				compr.push(val);
+			}
 		}
 		return compr;
 	}
@@ -691,7 +694,10 @@ function createToolkit(){
 				if (propogate){
 					e = new ToolkitInstance(e, this);
 				}
-				compr.push(fn(e, i));
+				var val = fn(e, i);
+				if (val !== undefined){
+					compr.push(val);
+				}
 			}
 			return compr;
 		}
