@@ -1,58 +1,61 @@
 /*
-	Return an initialized `Toolkit` object.
+	Creating an instance of this library.
 
-	No initialization is performed until this function
-	is called, meaning you can include `toolkit.js` on
-	pages where it isn't used with minimal performance 
-	and space cost.
-
-	The remainder of this documentation assumes this object
-	has been canonically instantiated as follows;
-	```
-	var tk = createToolkit({
-		debug: True
-	});
-	```
 	::object
 	::argspec config
-	:config (Optional, default '.tk-templates') A configuration 
-		object containing zero or more of the following configurable 
-		values:
-		* `templateContainer` A selector for the element
-			containing your mapping templates
-		* `debug` The debug flag, enabling or disabling
-			logging via `Toolkit.debug()` and `ToolkitInstance.debug()`
-		* `logElement` A selector for a DOM element to append logging to
+	:config (Optional) A configuration object containing zero or more of the 
+			following configurable values:
+		* `debug`: The debug flag, enabling or disabling logging via 
+			`Toolkit.debug()` and `ToolkitInstance.debug()`.
+		* `rootElement`: The root element used by the returned Toolkit. 
+			Defaults to `document`.
+		* `templateContainer`: A selector for the element(s) containing your 
+			mapping templates.
+		* `dataPrefix`: The prefix used for all element attributes. Defaults
+			to `tk`. Individual attribute names can be updated through the
+			`attrNames` property of the created object.
+		* `templateFunctions`: A name to function mapping of functions
+			available in data-DOM mappings.
+		* `bindFunction`: A function to be passed a `ToolkitInstance` for each 
+			root element being added to the DOM to allow callbacks to be bound 
+			on it.
 */
 function createToolkit(){
 	'use strict';
-	//	Polyfill Element.matches for IE 7-
+
+	//	Polyfill Element.matches for IE 7-.
 	if (!Element.prototype.matches){
 		Element.prototype.matches = Element.prototype.msMatchesSelector;
 	}
-	//	Placeholder Window for non-browser environs
-	if (!Window){
-		var Window = function(){};
-	}
+	//	Placehold `Window` for non-browser environments.
+	if (!Window){ var Window = function(){}; }
 
-	//	Load configuration
-	var config = {
+	//	Define the base Toolkit object for population.
+	var tk = function(object){
+		return new ToolkitInstance(object);
+	};
+
+	//	Create the default configuration.
+	tk.config = {
+		debug: false,
+		rootElement: document,
 		templateContainer: '.tk-templates',
 		dataPrefix: 'tk',
-		globalTemplateFunctions: {}, 
-		bindFunction: function(){},
-		debug: false
+		templateFunctions: {}, 
+		bindFunction: function(){}
 	};
+	//	Update the default configuration if a configuration parameter was 
+	//	passed.
 	if (arguments.length > 0){
 		var ovr = arguments[0];
 		for (var entry in ovr){
-			config[entry] = ovr[entry];
+			tk.config[entry] = ovr[entry];
 		}
 	}
 
-	//	Define attribute names
-	function makeDefault(ext){ return config.dataPrefix + '-' + ext; }
-	var attrNames = {
+	//	Define the default attribute names.
+	function makeDefault(ext){ return tk.config.dataPrefix + '-' + ext; }
+	tk.config.attrNames = {
 		bind: makeDefault('bind'),
 		onto: makeDefault('onto'),
 		viewFn: makeDefault('view-fn'),
@@ -65,553 +68,675 @@ function createToolkit(){
 	
 	/* ## Debug logging (Extra) */
 	/*
-		Log values for debugging.
+		Log values for debugging if the `debug` flag is set in configuration.
+
+		::usage
+		```
+		var tk = createToolkit({debug: true});
+		//	Will log to console.
+		tk.debug('Hello Console!');
+
+		tk = createToolkit({debug: false});
+		//	Won't log to console.
+		tk.debug('Hello Console!');
+		```
 
 		::argspec item1, ..., itemN
 	*/
-	function debug(){
-		if (config.debug){
+	tk.debug = function(){
+		if (tk.config.debug){
 			console.log.apply(null, arguments);
 		}
-	}
-	/*
-		Return the current time in milliseconds.
-	*/
-	debug.millis = function(){
-		var d = new Date();
-		return d.getTime();
 	}
 
 	/* ## Basic utilities */
 	/*
-		Iterate an Array or Object, calling a function
-		for each (Object, index) or (property name,
-		property value) pair, respectively.
-
-		::usage
-		```
-		var a = ['a', 'b'];
-		tk.debug('iter() on Array');
-		tk.iter(o, tk.debug);
-		
-		tk.debug('iter() on Object');
-		var o = {
-			a: 1,
-			b: 2
-		};
-		tk.iter(o, tk.debug);
-
-		tk.debug('Stopping iter()');
-		tk.iter(o, function(propName){
-			if (propName == 'a'){
-				tk.debug('I'm stopping');
-				return;
-			}
-		})
-		```
-
-		::argspec target, func
-		:target The Array or Object to iterate
-		:func The function to call at each iteration
+		Return the current time in milliseconds.
 	*/
-	function iter(t, fn){
-		switch (typeCheck(t, [MappedArray, Array, 'object', 'number'])){
+	tk.millis = function(){
+		var now = new Date();
+		return now.getTime();
+	}
+
+	/*
+		Iterate an `Array` or `Object`, calling `func` for each (`Object`, 
+		index) or (property name, property value) pair, respectively.
+
+		`func` can return `false` to stop the iteration.
+		
+		:target The `Array` or `Object` to iterate.
+		:func The function to call at each iteration.
+	*/
+	tk.iter = function(target, func){
+		switch (tk.typeCheck(target, [MappedArray, Array, 'object'])){
 			case 0:
 			case 1:
-				for (var i = 0; i < t.length; i++){
-					if (fn(t[i], i) === false){
+				for (var i = 0; i < target.length; i++){
+					if (func(target[i], i) === false){
 						break;
 					}
 				}
 				return;
 			case 2:
-				for (var k in t){
-					if (fn(k, t[k]) === false){
-						break;
-					}
-				}
-				return;
-			case 3:
-				for (var i = 0; i < t; i++){
-					if (fn(i) === false){
+				for (var key in target){
+					if (func(key, target[key]) === false){
 						break;
 					}
 				}
 				return;
 		}
-	}
-
-	//	TODO: Doc
-	function comprehension(list, transformFn){
-		typeCheck(list, [Array, MappedArray]);
-		var compr = [];
-		for (var i = 0; i < list.length; i++){
-			var val = transformFn(list[i], i);
-			if (val !== undefined){
-				compr.push(val);
-			}
-		}
-		return compr;
 	}
 
 	/*
-		Return whether or not an object has the 
-		given property, or pass a third parameter, `default`
-		to retrieve the value of that property, returning 
-		the default if it isn't present.
+		Perform a comprehension on the array or `MappedArray` `ary`. All non-
+		`undefined` values returned from `func` are added to an array which 
+		is returned by this function.
+
+		:ary The array to comprehend.
+		:func The comprehension function.
+	*/
+	tk.comprehension = function(ary, func){
+		typeCheck(ary, [Array, MappedArray]);
+		var comprehension = [];
+		for (var i = 0; i < ary.length; i++){
+			var value = func(ary[i], i);
+			if (value !== undefined){
+				comprehension.push(value);
+			}
+		}
+		return comprehension;
+	}
+
+	/*
+		::argspec -
+		Return whether or not an object has the given property.
 
 		::usage
 		```
-		var o = {
-			a: 1
-		};
-		var hasA = tk.prop(o, 'a');
-		tk.debug('o has property a:', hasA);
+		var obj = {};
+		
+		tk.debug(tk.prop(obj, 'x'));
+		//	Logs 'false'.
 
-		var a = tk.prop(o, 'a', 0);
-		tk.debug('o.a = ', a);
+		obj.x = null;
+		tk.debug(tk.prop(obj, 'x'));
+		//	Logs 'true'.
+		```
+		
+		::argspec object, propertyName, default
+		Return the value of `object[propertyName]` or `default` if `object` 
+		doesn't have the `propertyName` property.
 
-		var b = tk.prop(o, 'b', 0);
-		tk.debug('o.b defaulted to ', b);
+		::usage
+		```
+		var obj = {};
+		
+		tk.debug(tk.prop(obj, 'x', 100));
+		//	Logs '100'.
+
+		obj.x = 200;
+		tk.debug(tk.prop(obj, 'x', 100));
+		//	Logs '200'.
 		```
 
-		::argspec object, propertyName, default
-		:object The object to check for the given
-			property
-		:propertyName The name of the property to
-			check for
-		:default (Optional) A default value to return if 
-			the property isn't present
+		:obj The object to check for the given property.
+		:propertyName The name of the property to check for.
+		:default (Optional) A default value to return if the property isn't 
+			present.
 	*/
-	function prop(o, p){
-		var h = o.hasOwnProperty(p);
+	tk.prop = function(obj, propertyName){
+		var exists = obj.hasOwnProperty(p);
 		if (arguments.length == 2){
-			return h;
+			return exists;
 		}
-		return h ? o[p] : arguments[2];
+		return exists ? obj[propertyName] : arguments[2];
 	}
 
 	/*	
-		Return a version of `prop()` bound to the
-		given object.
+		Return a version of `prop()` bound to the given object.
+
+		::usage
+		```
+		var obj = {},
+			prop = tk.prop.on(obj);
+		
+		tk.debug(prop('x', 100));
+		//	Logs '100'.
+
+		obj.x = 200;
+		tk.debug(prop('x', 100));
+		//	Logs '200'.
+		```
+
+		::obj The object to bind the returned function to.
 	*/
-	prop.on = function(o){
-		return function(p){
+	tk.prop.on = function(obj){
+		return function(prop){
 			if (arguments.length == 2){
-				return prop(o, p, arguments[1]);
+				return tk.prop(obj, prop, arguments[1]);
 			}
-			return prop(o, p);
+			return tk.prop(obj, prop);
 		}
 	}
 
 	/*
 		Call a function later.
+		
+		:func The function to call.
+		:milliseconds The timeout before the function is
+			called, in milliseconds.
+	*/
+	tk.defer = function(func, milliseconds){
+		setTimeout(func, milliseconds);
+	}
+
+	/*
+		TODO[v0.1]: Better pattern.
+
+		Call a function at an interval. Returns an object with a `stop()` 
+		method that can clears the interval when called.
 
 		::argspec func, milliseconds, initial
-		:func The function to call
-		:milliseconds The timeout before the function is
-			called, in milliseconds
-		:initial Whether to call the function now, too
+		:func The function to call.
+		:milliseconds The interval in milliseconds.
+		:initial (Optional, default `false`) Whether to call the function 
+			initially.
 	*/
-	function defer(fn, t){
-		setTimeout(fn, t);
-		if (varg(arguments, 2, false)){
-			fn();
+	tk.repeat = function(func, milliseconds){
+		var i = setInterval(func, milliseconds);
+		if (tk.varg(arguments, 2, false)){
+			func();
+		}
+		return {
+			stop: function(){ clearInterval(i); }
 		}
 	}
 
-	//	TODO: Doc.
-	function repeat(fn, t){
-		var i = setInterval(fn, t);
-		if (varg(arguments, 2, false)){
-			fn();
+	/*
+		Generate a range.
+
+		::argspec max
+		Return the range of numbers between 0 and `max`.
+
+		::argspec min, max
+		Return the range of numbers between `min` and `max`.
+
+		:min The lower bound (inclusive).
+		:max The upper bound (exclusive).
+	*/
+	tk.range = function(arg){
+		var min = 0, max = arg;
+		if (arguments.length > 1){
+			min = arg;
+			max = arguments[1];
 		}
-		return {
-			stop: function(){
-				clearInterval(i);
-			}
+
+		var list = [];
+		for (var k = min; k < max; k++){
+			list.push(k);
 		}
+		return list;
+	}
+
+	/*
+		Return the name of `func` or `'<anonymous function>'` if the function
+		has no name.
+
+		:func The function to return the name of.
+	*/
+	tk.functionName = function(func){
+		var name = /^function\s+([\w\$]+)\s*\(/.exec(type.toString());
+		return name ? name[1] : '<anonymous function>';
 	}
 
 	/* ## Variable argument utilities (Extra) */
 	/*
-		Return the argument at index `i` or a default
-		value if there are fewer than `i + 1` arguments.
+		Return the argument at index `i` or a default value if there are fewer 
+		than `i + 1` arguments.
 
-		::argspec args, i, default, defaultOnNull
-		:args The `arguments` object
-		:i The index of the argument to (*maybe*)
-			retrieve
-		:default The default value to return if there
-			are fewer than `i + 1` arguments
-		:defaultOnNull (Optional, default `false`) Whether the 
-			value of the argument at index `i` being `null` 
-			should cause this function to return `default`
+		::usage
+		```
+		function f(){
+			tk.debug(tk.varg(arguments, 0, 'No arguments!'));
+		}
+
+		f();
+		//	Logs 'No arguments!'.
+		f('foobar');
+		//	Logs 'foobar'.
+		```
+		
+		::argspec args, i, defaultValue, defaultOnNull
+		:args The `arguments` object.
+		:i The index of the argument to (*maybe*) retrieve.
+		:defaultValue The default value to return if there are fewer than 
+			`i + 1` arguments.
+		:defaultOnNull (Optional, default `false`) Whether the value of the 
+			argument at index `i` being `null` should cause this function to 
+			return `default`.
 	*/
-	function varg(a, i, d){
-		if (a.length > i){
-			if (arguments.length > 3 && arguments[3] && a[i] == null){
-				//	4th arguments says you want default for null
-				return d;
+	tk.varg = function(args, i, defaultValue){
+		if (args.length > i){
+			if (arguments.length > 3 && arguments[3] && args[i] == null){
+				//	4th arguments says you want default for null.
+				return defaultValue;
 			}
-			return a[i];
+			return args[i];
 		}
-		return d;
+		return defaultValue;
 	}
 	/*
-		Return a version of `varg()` bound to the given
-		arguments list, to be used like `varg()`, less
-		the first positional argument.
+		Return a version of `varg()` bound to the given arguments list.
 
-		::argspec args
-		:args The arguments list to create a bound version
-			of `varg()` on
+		::usage
+		```
+		function f(){
+			var varg = tk.varg.on(arguments);
+			tk.debug(tk.varg(0, 'No first argument!'), tk.varg('No second argument!'));
+		}
+
+		f();
+		//	Logs 'No first argument!', 'No second argument!'.
+		f('foobar');
+		//	Logs 'foobar', 'No second argument!'.
+		```
+
+		:args The arguments list to bind the returned function to.
 	*/
-	varg.on = function(a){
-		return function(i, d){
-			return varg(a, i, d, varg(arguments, 2, false));
+	tk.varg.on = function(args){
+		return function(i, defaultValue){
+			return tk.varg(args, i, defaultValue, tk.varg(arguments, 2, false));
 		}
 	}
 
 	/*
-		Check the type of an object against a type or 
-		list of types, throwing a `TypeError` if the
-		check fails, and otherwise returning the
-		index of the type for which the check succeeded.
+		Check the type of an object against a type or list of types, throwing 
+		a `TypeError` if the check fails. Otherwise, return the index of the 
+		type for which the check succeeded.
 
 		`types` can contain any combination of:
 		* Type strings (e.g. `'number'`, `'function'`, etc.)
-		* Constructors (e.g. Array, Element, etc.)
-		* `null`
+		* Constructors (e.g. `Array`, `Element`, etc.)
+		* `null`s
 
-		::argspec object, types
-		:object The object to check the type of
-		:types The type, or list of types, against
-			which to check the object
+		::usage
+		```
+		tk.debug(tk.typeCheck({}, ['string', 'function', Array, 'object']));
+		//	Logs `3`.
+
+		tk.debug(tk.typeCheck({}, ['string', 'function', Array]));
+		//	Throws a `TypeError`.
+		```
+
+		:object The object to check the type of.
+		:types The type, or list of types, against which to check the object.
 	*/
-	function typeCheck(o, types){
+	tk.typeCheck = function(object, types){
+		//	Ensure types is iterable.
 		if (!(types instanceof Array)){
 			types = [types];
 		}
-		var m = -1;
+		var match = -1;
 		for (var i = 0; i < types.length; i++){
-			var c = types[i];
-			if (c == null) {
-				//	Null check
-				if (o == null){
-					m = i;
+			var check = types[i];
+			if (check == null) {
+				//	Null check.
+				if (object == null){
+					match = i;
 					break;
 				}
 			}
-			else if (typeof o == c){
-				//	Typeof check
-				m = i;
+			else if (typeof object == check){
+				//	Typeof check.
+				match = i;
 				break;
 			}
 			else {
-				//	Class check
+				//	Class check.
 				try {
-					if (o instanceof c){
-						m = i;
+					if (object instanceof check){
+						match = i;
 						break;
 					}
 				}
 				catch (e){}
 			}
 		}
-		if (m == -1){
-			throw new TypeError('Incorrect parameter type ' + (typeof param) + ' (expected one of ' + types + ')');
+		if (match == -1){
+			//	No match, create a nicely formatted error.
+			var expected = [];
+			for (var i = 0; i < types.length; i++){
+				var type = types[i];
+				if (type == null){
+					//	Null.
+					expected.push('null');
+				}
+				else if (typeof type == 'string'){
+					//	Type.
+					expected.push(type);
+				}
+				else {
+					//	Constructor function.
+					expected.push(tk.functionName(type));
+				}
+			}
+			throw new TypeError('Incorrect parameter type ' + (typeof param) 
+					+ ' (expected one of ' + expected.join(', ') + ')');
 		}
-		return m;
+		return match;
 	}
 
 	/*
 		Resolve a potentially functional value.
 
-		If `target` is a function, call it and pass it
-		the remainder of the parameters passed to this
-		function, then return the result.
+		If `target` is a function, call it and pass it the remainder of the 
+		parameters passed to this function, then return the result.
 
 		Otherwise, return `target`.
 
-		::argspec target, makeTks
+		::usage
+		```
+		tk.debug(tk.resolve(function(i, j){ return i + j; }, 1, 2));
+		//	Logs '3'.
+
+		tk.debug(tk.resolve(4, 1, 2));
+		//	Logs '4'.
+		```
+
+		::argspec target, wrapElements
 		:target The value to resolve
-		:makeTks (Optional, default `true`) Whether to create 
-			`ToolkitInstance`s for all `Element` arguments
+		:wrapElements (Optional, default `true`) Whether to replace all 
+			`Element` arguments with `ToolkitInstance`s selecting that
+			element.
 	*/
-	function resolve(t){
-		if (typeof t == 'function'){
+	tk.resolve = function(target){
+		if (typeof target == 'function'){
 			var args = [].slice.call(arguments);
 			args.splice(0, 1);
-			if (varg(arguments, 1, true)){
+			if (tk.varg(arguments, 1, true)){
 				for (var i = 0; i < args.length; i++){
 					if (args[i] instanceof Element){
 						args[i] = new ToolkitInstance(args[i]);
 					}
 				}
 			}
-			return t.apply(null, args);
+			return target.apply(null, args);
 		}
 		else {
-			return t;
+			return target;
 		}
 	}
 	
 	/* ## The `ToolkitInstance` object */
 	/*	
-		The `ToolkitInstance` object holds a set
-		of selected DOM `Node`s and provides methods
-		for modifying the properties of its members.
+		The `ToolkitInstance` object holds a set of selected DOM `Node`s and 
+		provides methods for modifying the properties of its members.
 
-		The set of elements selected by a
-		`ToolkitInstance` is, for all intents and
-		purposes, immutable.
+		The set of elements selected by a `ToolkitInstance` is immutable.
 
-		`ToolkitInstance`s can be conviently instantiated
-		by calling the function returned by `createToolkit()`.
-		For example;
+		`ToolkitInstance`s can be conviently instantiated by calling the 
+		function returned by `createToolkit()`.
+		
+		For example:
 		```
 		var foobars = tk('.foobar');
 		```
 
-		Aside from the methods below, `ToolkitInstance`s
-		have the properties `length` and `empty` for
-		inspecting the cardinality of the set of selected
-		elements.
+		Aside from the methods below, `ToolkitInstance`s have the properties 
+		`length` and `empty` for inspecting the cardinality of the set of 
+		selected elements.
 
 		::object
-		::argspec selection
-		:selection An `Element`, `Array`, selector `string`, 
-			or `Window`
+		:selection An `Element`, query selector, `Array` of `Element`s and or
+			`ToolkitInstance`s, or `Window`.
 	*/
-	function ToolkitInstance(o){
+	function ToolkitInstance(selection){
+		//	Store reference to `this`.
 		var self = this;
+
+		var origin = tk.varg(arguments, 1, null);
 		
-		//	Resolve the selection
+		//	Resolve the selection.
 		this.set = (function(){
-			if (o instanceof ToolkitInstance){
-				o = o.set.splice();
+			if (selection instanceof ToolkitInstance){
+				selection = selection.set.splice();
 			}
-			switch (typeCheck(o, [Element, Window, Array, 'string'])) {
+			switch (tk.typeCheck(selection, [Element, Window, Array, 'string'])){
 				case 0:
-				case 1: return [o];
+				case 1: return [selection];
 				case 2:
-					for (var i = 0; i < o.length; i++){
-						var e = o[i];
-						if (e instanceof ToolkitInstance){
-							o[i] = e.set[0];
+					for (var i = 0; i < selection.length; i++){
+						var element = selection[i];
+						if (element instanceof ToolkitInstance){
+							selection[i] = element.set[0];
 						}
 					}
-					return o;
-				case 3: return document.querySelectorAll(o);
+					return selection;
+				case 3: return tk.config.rootElement.querySelectorAll(selection);
 			}
 		})();
-		//	Parent for back()
-		this.backP = varg(arguments, 1, null);
-		//	Cardinality properties
+		//	Set cardinality properties.
 		this.length = this.set.length;
 		this.empty = this.length == 0;
 		
 		/* ## In-chain debugging (Extra) */
-
-		/*	
+		/*
 			Print a labeled debug statement while chaining.
-			For example;
+			
+			::usage.
 			```
 			tk('.foo').debug('Before reduction')
 				.reduce('.bar').debug('After reduction');
 			```
 			::argspec label
-			:label (Optional, default `'Debug'`) The label to use
+			:label (Optional, default `'Debug'`) The label to use.
 		*/
 		this.debug = function(){
-			console.log(varg(arguments, 0, 'Debug') + ':', this);
+			console.log(tk.varg(arguments, 0, 'Debug') + ':', this);
 			return this;
 		}
 
 		/* ## Selection modifiers and chaining */
-
 		/*
-			Move backwards once in the chain (i.e., return
-			the `ToolkitInstance` that created this one).
+			Move backwards once in the chain (i.e., return the 
+			`ToolkitInstance` that created this one).
 
-			For example:
+			::usage
 			```
 			tk('.foo').reduce('.bar')
-				.debug('Selecting all foos that are bars')
-				.back().debug('Selecting all foos');
+				.debug("Selecting all 'foo's that are 'bar's")
+				.back().debug("Selecting all 'foo's again");
 			```
 		*/
 		this.back = function(){
-			if (this.backP == null){
+			if (origin == null){
 				throw new ChainingError('Called back() without parent');
 			}
-			return this.backP;
+			return origin;
 		}
 
 		/*
-			Return a new `ToolkitInstance` selecting
-			the same set, but in reverse order.
+			Return a new `ToolkitInstance` selecting the same set, but in 
+			reverse order.
 		*/
 		this.reverse = function(){
-			var ns = this.set.slice();
-			ns.reverse();
-			return new ToolkitInstance(ns, this);
+			var newSet = this.set.slice();
+			newSet.reverse();
+			return new ToolkitInstance(newSet, this);
 		}
 
 		/*	
-			Return a new `ToolkitInstance` selecting the 
-			`i`th selected element, or the `i`th selected
-			element itself.
+			Return a new `ToolkitInstance` selecting the `i`th selected element, 
+			or the `i`th selected element itself.
+
+			If `i` is out of bounds, throw an `OutOfSetBounds` exception.
 			
-			::argspec i, returnElem
-			:returnElem (Optional, default `false`) Whether to
-				return the `Element` rather than a `ToolkitInstance`
-				selecting it.
+			::argspec i, wrapElement
+			:i The index of the element to return.
+			:wrapElement (Optional, default `true`) Whether to return a 
+				`ToolkitInstance` selecting the `i`th element instead of
+				the `i`th element itself.
 		*/
 		this.ith = function(i){
-			var w = varg(arguments, 1, false);
-			return !w ? new ToolkitInstance(this.set[i], this) : this.set[i];
+			if (i < 0 || i >= this.length){
+				throw new OutOfSetBounds(i);
+			}
+			var wrap = tk.varg(arguments, 1, true);
+			return wrap ? new ToolkitInstance(this.set[i], this) : this.set[i];
 		}
 
 		/*
-			Return a new `ToolkitInstance` selecting all
-			element selected elements that match `'selector'`.
+			Return a new `ToolkitInstance` selecting all selected elements that 
+			match the query selector `'reducer'`.
 
-			::argspec selector
-			:selector (Functional) The selection filter
+			If `'reducer'` is a function, return a new `ToolkitInstance` 
+			selecting all elements for which it returned true. 
+
+			:reducer (Functional) The reduction filter.
 		*/
-		this.reduce = function(s){
-			typeCheck(s, ['string', 'function']);
-			var ns = [], max = varg(arguments, 1, -1);
-			this.iter(function(e, i){
-				if (e.is(resolve(s, e, i))){
-					ns.push(e);
-					if (max >= 0 && ns.length == max){
-						return false;
-					}
-				}
-			});
-			return new ToolkitInstance(ns, this);
-		}
-
-		/*
-			Return a new `ToolkitInstance` with an
-			expanded set of selected elements.
-
-			::argspec toInclude
-			:toInclude An `Array` or `ToolkitInstance`
-				with which to extend the selection
-		*/
-		this.extend = function(o){
-			switch (typeCheck(o, [ToolkitInstance, Array])){
+		this.reduce = function(reducer){
+			var newSet;
+			switch (tk.typeCheck(reducer, ['string', 'function'])){
 				case 0:
-					o = o.set;
+					newSet = this.comprehension(function(e){
+						if (e.is(reducer)){ return e; }
+					});
+					break;
 				case 1:
-					var ns = [];
-					this.iter(function(e, i){
-						ns.push(e);
-					}, false);
-					for (var i = 0; i < o.length; i++){
-						ns.push(o[i]);
-					}
-					return new ToolkitInstance(ns, this);
+					newSet = this.comprehension(reducer);
+			}
+			
+			return new ToolkitInstance(newSet, this);
+		}
+
+		/*
+			Return a new `ToolkitInstance` with an expanded set of selected 
+			elements.
+
+			:extension A `ToolkitInstance` or `Array` of `Element`s and or 
+				`ToolkitInstance`s.
+		*/
+		this.extend = function(extension){
+			switch (tk.typeCheck(extension, [ToolkitInstance, Array])){
+				case 0:
+					extension = extension.set;
+				case 1:
+					//	Convert `ToolkitInstance`s to elements.
+					//	TODO: Handle multi-selected `ToolkitInstance`s.
+					extension = tk.comprehension(extension, function(e){
+						return e instanceof ToolkitInstance ? e.set[0] : e;
+					});
+					return new ToolkitInstance(this.set.concat(extension), this);
 			}
 		}
 
 		/*
-			Return a new `ToolkitInstance` selecting the
-			most immediate parent of each element in the
-			currently selected set.
-		*/
-		this.parent = function(){
-			return this.parents('*', false);
-		}
+			Return a new `ToolkitInstance` selecting parents of the currently 
+			selected elements.
 
-		/*
-			Return a new `ToolkitInstance` selecting all
-			parents of the currently selected elements.
+			::argspec reducer, high 
+			Return all parent elements after filtering with `reducer`. 
+			
+			If `reducer` is a query selector, return all elements which match 
+			it. If it is a function, return all elements for which it returned
+			`true`.
 
-			A selector can be used to filter which elements
-			are selected.
+			::argspec high
+			Return an unfiltered set of parent elements.
 
-			::argspec selector, high
-			:selector (Optional, functional) A selector to filter on
-			:high (Optional, default `true`) Whether to return all
-				parents or only immediate ones
+			:reducer (Optional) A query selector or function for filtering.
+			:high (Optional, default `true`) Whether to return all parents or 
+				only immediate ones.
 		*/
 		this.parents = function(){
-			var s = arguments.length > 0 ? arguments[0] : null,
-				h = arguments.length > 1 ? arguments[1] : true, l = [];
-			typeCheck(s, [null, 'string', 'function']);
-			typeCheck(h, ['boolean']);
-			if (h){
+			if (arguments.length == 1){
+				//	`high` flag only.
+				//	TODO: Better impl.
+				return this.parents('*', arguments[0]);
+			}
+			//	Collect and assert arguments.
+			var reducer = tk.varg(arguments, 0, null),
+				reducerType = typeCheck(reducer, [null, 'string', 'function']),
+				high = tk.varg(arguments, 1, true), 
+				list;
+			//	Assert high is a flag.
+			typeCheck(high, ['boolean']);
+			
+			//	TODO: `i` is the index of the element whose parent this is.
+			//		(unintuative).
+			function filter(e, i){
+				return (
+					(reducer == null) || 
+					(reducerType == 1 &&  parent.matches(reducer)) ||
+					(reducerType == 2 && reducer(e, i))
+				);
+			}
+			
+			if (high){
+				list = []
 				this.iter(function(e, i){
-					var p = e.parentNode;
-					while (p !== document){
-						if (s == null || p.matches(resolve(s, e, i))){
-							l.push(p);
+					var parent = e.parentNode;
+					while (parent !== document){
+						if (filter(parent, i)){
+							list.push(parent);
 						}
-						p = p.parentNode;
+						parent = parent.parentNode;
 					}
 				}, false);
 			}
 			else {
-				this.iter(function(e, i){
-					var p = e.parentNode;
-					if (s == null || p.matches(resolve(s, e, i))){
-						l.push(p);
-					}
+				list = this.comprehension(function(e, i){
+					if (filter(e.parent, i)){ return e.parent; }
 				}, false);
 			}
-			return new ToolkitInstance(l, this);
+			return new ToolkitInstance(list, this);
 		}
 		
 		/*
-			Return a new `ToolkitInstance` selecting all
-			the childen of all selected elements.
+			Return a new `ToolkitInstance` selecting all the childen of all 
+			selected elements.
 
-			A selector can be used to filter which elements
-			are selected.
+			A selector can be used to filter which elements are selected.
 
-			::argspec selector, deep
-			:selector (Optional, functional) A selection filter
+			::argspec selector, deep | deep
+			:selector (Optional, functional) A selection filter.
 			:deep (Optional, default `true`) Whether to return all children
-				or only immediate ones
+				or only immediate ones.
 		*/
 		this.children = function(){
-			//	TODO: Allow children(false) for shallow any
-			//	TODO: Vargify
-			var l = [], s = arguments.length > 0 ? arguments[0] : '*',
-				d = arguments.length > 1 ? arguments[1] : true;
-			if (d){
+			if (arguments.length == 1){
+				//	`deep` flag only.
+				return this.children('*', arguments[0]);
+			}
+			//	Collect and assert parameters.
+			var selector = tk.varg(arguments, 0, '*'),
+				deep = tk.varg(arguments, 1, true), list = [];
+			
+			if (deep){
 				this.iter(function(e, i){
-					var mine = e.querySelectorAll(resolve(s, e, i));
-					for (var j = 0; j < mine.length; j++){
-						var g = mine[j];
-						if (l.indexOf(g) == -1){
-							l.push(g);
+					tk.iter(e.querySelectorAll(tk.resolve(selector, e, i)), function(g, j){
+						//	Ensure we don't have duplicate entries.
+						if (list.indexOf(g) == -1){
+							list.push(g);
 						}
-					}
+					});
 				}, false);
 			}
 			else {
 				this.iter(function(e, i){
-					var mine = e.children;
-					for (var j = 0; j < mine.length; j++){
-						var c = mine[j];
-						if (s == null || c.matches(resolve(s, e, i))){
-							l.push(c);
+					tk.iter(e.children, function(g, j){
+						if (selector == null || g.matches(tk.resolve(selector, e, i))){
+							list.push(g);
 						}
-					}
+					});
 				}, false);
 			}
-			return new ToolkitInstance(l, this);
+			return new ToolkitInstance(list, this);
 		}
 
 		/*
-			Deep-copy the first selected element and
-			return a `ToolkitInstance` selecting it.
+			Deep-copy the first selected element and return a `ToolkitInstance`
+			selecting it.
 
 			::firstonly
 		*/
@@ -622,71 +747,76 @@ function createToolkit(){
 		/* ## Inspection */
 		/*
 			Return:
-			* Given an `Element`, whether the selected set
-				contains only that element
-			* Given an `Array`, whether the array contains all
-				elements of the selected set, and vice-versa
-			* Given a `ToolkitInstance`, whether it is selecting
-				the identical set of elements
+			* Given an `Element`, whether the selected set contains only that 
+				element.
+			* Given an `Array`, whether the array contains all elements of the 
+				selected set, and vice-versa.
+			* Given a `ToolkitInstance`, whether it is selecting the identical 
+				set of elements.
 
-			::argspec object
-			:object The `Element`, `Array`, or `ToolkitInstance`
-				to check for equality against
+			:object The `Element`, `Array`, or `ToolkitInstance` to check for 
+				equality against.
 		*/
-		this.equals = function(o){
-			switch(typeCheck(o, [Element, Array, ToolkitInstance])){
+		this.equals = function(object){
+			switch(tk.typeCheck(object, [Element, Array, ToolkitInstance])){
 				case 0:
-					return self.length == 1 && self.set[0] == o;
+					return self.length == 1 && self.set[0] == object;
 				case 2:
-					o = o.set;
+					object = object.set;
 				case 1:
-					var d = false;
-					iter(o, function(e){
+					var diff = false;
+					iter(object, function(e){
 						if (self.set.indexOf(e) == -1){
-							d = true;
+							diff = true;
 							return false;
 						}
 					});
 					iter(self.set, function(e){
-						if (o.indexOf(e) == -1){
-							d = true;
+						if (object.indexOf(e) == -1){
+							diff = true;
 							return false;
 						}
 					})
-					return !d && self.length == o.length;
+					return !diff && self.length == object.length;
 			}
 		}
 
 		/*	
-			Iterate the currently selected set, passing each
-			selected element and its index to a callback (in
-			that order).
+			Iterate the currently selected set, passing each selected element 
+			and its index to a callback (in that order).
 
-			Like `Toolkit.iter()`, callbacks can return false
-			to stop the loop.
+			Like `iter()`, `func` can return `false` to iteration.
 
 			::argspec func, propagate
-			:func The iteration callback
-			:propagate (Optional, default `true`) whether to pass 
-				elements to the callback as `ToolkitInstance`s 
-				instead of `Element`s.
+			:func The iteration callback.
+			:propagate (Optional, default `true`) whether to pass `Element`s to 
+				the callback selected by `ToolkitInstance`s.
 		*/
-		this.iter = function(fn){
+		this.iter = function(func){
 			var propogate = varg(arguments, 1, true);
 			for (var i = 0; i < this.set.length; i++){
 				var e = this.set[i];
 				if (propogate){
 					e = new ToolkitInstance(e, this);
 				}
-				if (fn(e, i) === false){
+				if (func(e, i) === false){
 					break;
 				}
 			}
 			return this;
 		}
 
-		//	TODO: Doc
-		this.comprehension = function(fn){
+		/*
+			Perform a comprehension on the currently selected set of elements. 
+			All non-`undefined` values returned from `func` are added to an 
+			array which is returned by this function.
+
+			::argspec func, propagate
+			:func The comprehension function.
+			:propagate (Optional, default `true`) whether to pass `Element`s to 
+				the callback selected by `ToolkitInstance`s.
+		*/
+		this.comprehension = function(func){
 			var propogate = varg(arguments, 1, true);
 			var compr = [];
 			for (var i = 0; i < this.set.length; i++){
@@ -694,7 +824,7 @@ function createToolkit(){
 				if (propogate){
 					e = new ToolkitInstance(e, this);
 				}
-				var val = fn(e, i);
+				var val = func(e, i);
 				if (val !== undefined){
 					compr.push(val);
 				}
@@ -703,16 +833,15 @@ function createToolkit(){
 		}
 
 		/*	
-			Return whether all selected elements
-			match a selector.
+			Return whether all selected elements match a selector.
 		
-			:selector (Functionable) The selector to check
+			:selector (Functionable) The selector to check.
 		*/
 		this.is = function(selector){
 			typeCheck(selector, ['string', 'function']);
 			for (var i = 0; i < this.length; i++){
 				var e = this.set[i];
-				if (!e.matches(resolve(selector, e, i))){
+				if (!e.matches(tk.resolve(selector, e, i))){
 					return false;
 				}
 			}
@@ -720,8 +849,7 @@ function createToolkit(){
 		}
 
 		/*
-			Return the complete list of classes for
-			all selected elements.
+			Return the complete list of classes for all selected elements.
 		*/
 		this.classes = function(){
 			var all = [];
@@ -738,12 +866,11 @@ function createToolkit(){
 		}
 
 		/*
-			Return the value of the first selected
-			element if it's an input.
+			Return the value of the first selected element if it's an input.
 		*/
 		this.value = function(){
 			if (arguments.length > 0){
-				var v = arguments[0];
+				var value = arguments[0];
 				this.iter(function(e, i){
 					e.value = v;
 				}, false);
@@ -757,20 +884,19 @@ function createToolkit(){
 			}
 		}
 
-		/* ## Inspection *and* modification */
+		/* ## Inspection and modification */
 		/*
 			Get, set, or modify element attributes.
 
 			### Get
-			Return the value of an attribute on the first selected
-			element, or `null` if it isn't present.
+			Return the value of an attribute on the first selected element, 
+			or `null` if it isn't present.
 
 			### Set
-			Set an attribute, or multiple attributes from
-			an object by property. Attribute values are functional.
+			Set an attribute, or multiple attributes from an object by property. 
+			Attribute values are functional.
 			
-			If a single attribute is being set, attribute
-			name is functional.
+			If a single attribute is being set, attribute name is functional.
 			
 			To remove an attribute, pass `null`.
 
@@ -791,17 +917,17 @@ function createToolkit(){
 			
 			::softfirstonly
 			::argspec attr, value | object
-			:attr (Functional) The attribute name
-			:value (Optional, functional) The attribute value
-			:object The object containing attribute names and values
-				as properties
+			:attr (Functional) The attribute name.
+			:value (Optional, functional) The attribute value.
+			:object The object containing attribute names and values as 
+				properties.
 		*/
-		this.attr = function(a){
-			switch (typeCheck(a, ['string', 'object'])) {
+		this.attr = function(attr){
+			switch (tk.typeCheck(attr, ['string', 'object'])) {
 				case 0:
 					if (arguments.length > 1){
-						var name = a, val = arguments[1];
-						switch (typeCheck(val, [null, 'string', 'function'])){
+						var name = attr, value = arguments[1];
+						switch (tk.typeCheck(value, [null, 'string', 'function'])){
 							case 0:
 								this.iter(function(e, i){
 									e.removeAttribute(name, null);
@@ -809,21 +935,21 @@ function createToolkit(){
 								break;
 							default:
 								this.iter(function(e, i){
-									e.setAttribute(resolve(name, e, i), resolve(val, e, i));
+									e.setAttribute(tk.resolve(name, e, i), tk.resolve(value, e, i));
 								}, false);
 						}
 					}
 					else {
-						if (this.set[0].hasAttribute(a)){
-							return this.set[0].getAttribute(a);
+						if (this.set[0].hasAttribute(attr)){
+							return this.set[0].getAttribute(attr);
 						}
 						return null;
 					}
 					break;
 				case 1:
 					this.iter(function(e, i){
-						for (var name in a){
-							e.setAttribute(name, resolve(a[name], e, i));
+						for (var name in attr){
+							e.setAttribute(name, tk.resolve(attr[name], e, i));
 						}
 					}, false);
 					break;
@@ -835,8 +961,8 @@ function createToolkit(){
 			Get computed styles and set element-level styles.
 			
 			### Get
-			Retrieve the computed value of a style for the 
-			first selected element.
+			Retrieve the computed value of a style for the first selected 
+			element.
 
 			### Set
 			Set an element-level style for each selected element, or set
@@ -872,32 +998,33 @@ function createToolkit(){
 			::softfirstonly
 			::argspec styleName, value | object
 			:styleName (functional) The name of the CSS style to set, in either
-				*dash-case* or *camelCase*
-			:value (Optional, functional) The property value
+				`dash-case` or `camelCase`.
+			:value (Optional, functional) The property value.
 		*/
-		this.css = function(p){
-			function applyOne(s, v){
-				s = s.replace(/-([a-z])/g, function(g){
+		this.css = function(prop){
+			function applyOne(name, value){
+				//	Make dash case.
+				name = name.replace(/-([a-z])/g, function(g){
 					return g[1].toUpperCase();
-				});		
+				});	
 				self.iter(function(e, i){
-					e.style[s] = resolve(v, e, i);
+					e.style[name] = tk.resolve(value, e, i);
 				}, false);
 			}
 
-			switch (typeCheck(p, ['string', 'object'])){
+			switch (tk.typeCheck(prop, ['string', 'object'])){
 				case 0:
 					if (arguments.length > 1){
-						//	Set a single style
-						applyOne(p, arguments[1]);
+						//	Set a single style.
+						applyOne(prop, arguments[1]);
 					}
 					else {
-						return window.getComputedStyle(this.set[0]).getPropertyValue(p);
+						return window.getComputedStyle(this.set[0]).getPropertyValue(prop);
 					}
 					break;
 				case 1:
-					for (var s in p){
-						applyOne(s, p[s]);
+					for (var name in prop){
+						applyOne(name, prop[name]);
 					}
 					break;
 			}
@@ -907,8 +1034,8 @@ function createToolkit(){
 		/*
 			Attach a callback to all selected elements.
 
-			The callback will be passed a `ToolkitInstance`
-			of the firing element, as well as its index.
+			The callback will be passed a `ToolkitInstance` of the firing 
+			element, as well as its index.
 
 			::usage
 			```
@@ -933,22 +1060,19 @@ function createToolkit(){
 			```
 
 			::argspec event, callback
-			:event (Functional) The name of the event to bind
-				the callback to
-			:callback The callback function to bind
+			:event (Functional) The name of the event to bind the callback to.
+			:callback The callback function to bind.
 		*/
-		this.on = function(a){
-			function setOne(evt, fn){
+		this.on = function(arg){
+			function setOne(event, func){
 				self.iter(function(e, i){
-					var list = prop(e, 'tkEventListeners', null);
-					if (list == null){
-						list = [];
-						e.tkEventListeners = list;
+					if (!tk.prop(e, 'tkEventListeners')){
+						e.tkEventListeners = [];
 					}
 					var add = {
 						event: resolve(evt, e, i),
 						func: function(g){
-							fn(new ToolkitInstance(e), g, i);
+							func(new ToolkitInstance(e), g, i);
 						}
 					}
 					list.push(add)
@@ -956,14 +1080,14 @@ function createToolkit(){
 				}, false);
 			}
 
-			switch (typeCheck(a, ['function', 'string', 'object'])){
+			switch (tk.typeCheck(arg, ['function', 'string', 'object'])){
 				case 0:
 				case 1:
-					setOne(a, arguments[1]);
+					setOne(arg, arguments[1]);
 					break;
 				case 2:
-					for (var k in a){
-						setOne(k, a[k]);
+					for (var name in arg){
+						setOne(name, arg[name]);
 					}
 					break;
 			}
@@ -971,109 +1095,115 @@ function createToolkit(){
 		}
 
 		/*
-			Remove all listeners for a given event
-			from all selected elements.
+			Remove all listeners for a given event from all selected elements.
 
-			::argspec event
-			:event The event to remove listeners for
+			:event The event to remove listeners for.
 		*/
-		this.off = function(a){
+		this.off = function(event){
 			this.iter(function(e){
-				var l = prop(e, 'tkEventListeners', []), r = [];
-				iter(l, function(o, i){
-					if (o.event == a){
+				var list = prop(e, 'tkEventListeners', []), remove = [];
+				//	Find the callbacks to remove.
+				iter(list, function(o, i){
+					if (o.event == event){
 						e.removeEventListener(o.event, o.func);
-						r.push(i);
+						remove.push(i);
 					}
 				});
-				iter(r, function(i){
-					l = l.splice(i, 1);
+				//	Remove all found callbacks.
+				iter(remove, function(i){
+					list = list.splice(i, 1);
 				});
 			}, false);
 			return this;
 		}
 
 		/*
-			Add, remove, or toggle a class, or multiple
-			classes by object property.
+			Add, remove, or toggle a class. Modify multiple classes by object 
+			property.
 
 			`flag` is functional.
 
-			If a single class is being flagged, class
-			name if functional.
+			If a single class is being flagged, class name if functional.
 
-			Passing a non-negative value as the third parameter,
-			`time`, will cause the opposite classification to
-			the one performed by this function to occur after 
-			`time` milliseconds.
+			Passing a non-negative value as the third parameter, `time`, will 
+			cause the opposite classification to the one performed by this 
+			function to occur after `time` milliseconds.
 
 			*Please contribute on GitHub to help that sentence*.
 
 			::usage
 			```
+			//	Add the class 'hot' to all '.foo.bar' elements.
 			tk('.foo').classify('hot', function(e){
 				return e.is('.bar');
 			}, 500);
+			
+			//	Swap all '.foo's to '.bar's
+			tk('.foo').classify({
+				'foo': false,
+				'bar': true
+			});
 			```
 
 			::argspec cls, flag, time | obj
-			:cls The class name
-			:flag (Optional, functional, default `true`) Whether
-				to add or remove the class
-			:time (Optional, functional, default `-1`) The deferred
-				reversal parameter
+			:cls The class name.
+			:flag (Optional, functional, default `true`) Whether to add or 
+				remove the class.
+			:time (Optional, functional, default `-1`) The deferred reversal 
+				parameter.
 		*/
-		this.classify = function(a){
-			function classifyOne(cls, f, t){
-				var sel = '.' + cls, add = ' ' + cls;
-				if (f == 'toggle'){
-					//	Special second parameter option
+		this.classify = function(arg){
+			function classifyOne(cls, flag, time){
+				var selector = '.' + cls, toAdd = ' ' + cls;
+				if (flag == 'toggle'){
+					//	Special second parameter option.
 					f = function(e, i){
-						return !e.is(sel);
+						return !e.is(selector);
 					}
 				}
 				self.iter(function(e, i){
-					var g = resolve(f, e, i);
-					if (g){
-						//	Add
-						if (!e.is(sel)){
-							e.set[0].className += add
+					var actualFlag = tk.resolve(flag, e, i);
+					if (actualFlag){
+						//	Add.
+						if (!e.is(selector)){
+							e.set[0].className += toAdd;
 						}
 					}
 					else {
-						//	Remove
-						if (e.is(sel)){
+						//	Remove.
+						if (e.is(selector)){
 							var classes = e.classes();
 							classes.splice(classes.indexOf(cls), 1);
 							e.set[0].className = classes.join(' ');
 						}
 					}
-					var mt = resolve(t, e, i);
-					if (mt >= 0){
+					var actualTime = tk.resolve(time, e, i);
+					if (actualTime >= 0){
+						//	Reverse the classification later.
 						defer(function(){
-							classifyOne(cls, !g, -1);
-						}, mt);
+							classifyOne(cls, !actualFlag, -1);
+						}, actualTime);
 					}
 				});
 			}
 
-			switch (typeCheck(a, ['string', 'object'])){
+			switch (tk.typeCheck(arg, ['string', 'object'])){
 				case 0:
-					//	Set single
-					classifyOne(a, varg(arguments, 1, true), varg(arguments, 2, -1));
+					//	Set a single attribute.
+					var varg = tk.varg.on(arguments);
+					classifyOne(arg, varg(1, true), varg(2, -1));
 					break;
 				case 1:
-					for (var cls in a){
-						classifyOne(cls, a[cls]);
-					}
+					//	Set attributes from a mapping.
+					tk.iter(arg, classifyOne);
 					break;
 			}
 			return this;
 		}
 
 		/*
-			Remove all currently selected elements from the
-			DOM (they remain selected).
+			Remove all currently selected elements from the DOM (they remain 
+			selected).
 		*/
 		this.remove = function(){
 			this.iter(function(e){
@@ -1085,21 +1215,18 @@ function createToolkit(){
 		}
 
 		/*
-			Append an element to the first matched
-			element. If passed a `ToolkitInstance`,
-			each of its selected elements are appended.
+			Append an element to the first matched element. If passed a 
+			`ToolkitInstance`, each of its selected elements are appended.
 
-			Returns a new `ToolkitInstance` selecting
-			all appended elements.
+			Returns a new `ToolkitInstance` selecting all appended elements.
 			
 			::firstonly
-			::argspec element
-			:element The element or `ToolkitInstance` to append
+			:element The element or `ToolkitInstance` to append.
 		*/
 		this.append = function(e){
 			switch (typeCheck(e, [Array, ToolkitInstance, Element])){
 				case 0:
-					//	TODO: Efficiency
+					//	TODO: Efficiency.
 					var set = [];
 					iter(e, function(g){
 						var tki = self.append(g);
@@ -1124,12 +1251,10 @@ function createToolkit(){
 		}
 
 		/*
-			Prepend an element to the first matched
-			element. If passed a `ToolkitInstance`,
-			each of its selected elements are prepended.
+			Prepend an element to the first matched element. If passed a 
+			`ToolkitInstance`, each of its selected elements are prepended.
 
-			Returns a new `ToolkitInstance` selecting
-			all prepended elements.
+			Returns a new `ToolkitInstance` selecting all prepended elements.
 		
 			::firstonly
 			::argspec element
@@ -1294,7 +1419,11 @@ function createToolkit(){
 		}
 	}
 
+	
+
 	/* ## Other objects (Extras) */
+	function UnderfullSet(){}
+
 	/*
 		An exception thrown when incorrect chaining occurs 
 		(e.g., `back()` is called on a `ToolkitInstance` with
@@ -1597,7 +1726,7 @@ function createToolkit(){
 		this.push = function(){
 			for (var i = 0; i < arguments.length; i++){
 				var v = arguments[i];
-				var node = template.copy().attr('tk-template', null);
+				var node = template.copy().attr(tk.config.attrNames., null);
 				applyIndex(self.length, new MappedObject(v, node, self));
 				self.length++;
 				target.append(node);
@@ -1792,25 +1921,6 @@ function createToolkit(){
 		return tk;
 	}
 
-	var tk = function(obj){
-		return new ToolkitInstance(obj);
-	}
-	//	Populate the object
-	tk.config = config;
-	tk.prop = prop;
-	tk.debug = debug;
-	tk.varg = varg;
-	tk.defer = defer;
-	tk.repeat = repeat;
-	tk.iter = iter;
-	tk.comprehension = comprehension;
-	tk.e = createElement;
-	tk.request = request;
-	tk.map = map;
-	tk.templates = templates;
-	tk.init = init;
-	tk.typeCheck = typeCheck;
-	tk.attrNames = attrNames;
 	tk.types = {
 		ToolkitInstance: ToolkitInstance,
 		MappedObject: MappedObject,

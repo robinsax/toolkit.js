@@ -1,12 +1,13 @@
 #	coding utf-8
 '''
-Minification thanks to https://javascript-minifier.com/
+Minification.
 '''
+
 import sys
 
 ENDPOINT = 'https://javascript-minifier.com/raw'
 
-def main():
+def minify():
 	try:
 		import requests
 	except ImportError:
@@ -21,8 +22,8 @@ def main():
 	})
 
 	with open('README.md', 'r') as f:
-		readme = f.read().replace('\n', '\n\t')
-	header = f'/*\n\t{readme}\n*/'
+		readme = f.read()
+	header = f'/*\n{readme}\n*/'
 	
 	with open('toolkit.min.js', 'w') as f:
 		f.write(f'{header}\n{response.text}')
@@ -31,4 +32,4 @@ def main():
 	return 0
 
 if __name__ == '__main__':
-	sys.exit(main())
+	sys.exit(minify())
