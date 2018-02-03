@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<script src="../toolkit.js"></script>
+		<script defer>
+			var tk = createToolkit();
+
+			var articles = [
+				{
+					title: 'Corporate business report 2022',
+					content: 'Makin\'.',
+					color: 'blue',
+					comments: [
+						'Nice!',
+						'Wow rlly!?',
+						'Lame.'
+					]
+				},
+				{
+					title: 'The environment is gone.',
+					content: 'Goodbye!',
+					color: 'green',
+					comments: [
+						'Wind enerjie.'
+					]
+				}
+			];
+
+			function createArticle(article){
+				return tk.tag('div').classify('article', true)
+					.bind(article, 'color')
+						.placement(function(d, e){ e.css('background-color', d); })
+						.begin()
+					.append([
+						tk.tag('h3').bind(article, 'title')
+							.transform(function(d){ return d.toUpperCase(); })
+							.begin(),
+						tk.tag('p').bind(article, 'content').begin(),
+						tk.tag('ul').bind(article, 'comments')
+							.placement(function(d, e){
+								e.append(
+									tk.comprehension(d, function(item){ return tk.tag('li').html(item) })
+								);
+							})
+							.reset(function(d, e){ e.html(''); })
+							.begin()
+					])
+				.back();
+			}
+
+			tk.init(function(){
+				tk('body').append(
+					tk.comprehension(articles, createArticle)
+				);
+			});
+		</script>
+	</head>
+	<body></body>
+</html>
