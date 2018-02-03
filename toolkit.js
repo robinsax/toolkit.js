@@ -262,8 +262,6 @@ function createToolkit(){
 	}
 
 	/*
-		TODO[v0.1]: Better pattern.
-
 		Call a function at an interval. Returns an object with a `stop()` 
 		method that can clears the interval when called.
 
@@ -318,6 +316,13 @@ function createToolkit(){
 	tk.functionName = function(func){
 		var name = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 		return name ? name[1] : '<anonymous function>';
+	}
+
+	/*
+		Extend another class.
+	*/
+	tk.extends = function(self, target){
+		target.apply(self);
 	}
 
 	/* ## Variable argument utilities (Extra) */
@@ -1048,7 +1053,11 @@ function createToolkit(){
 					return g[1].toUpperCase();
 				});	
 				self.iter(function(e, i){
-					e.style[name] = tk.resolve(value, e, i);
+					var v = tk.resolve(value, e, i);
+					if (typeof v == 'number'){
+						v = v + 'px';
+					}
+					e.style[name] = v;
 				}, false);
 			}
 
@@ -1194,7 +1203,7 @@ function createToolkit(){
 		*/
 		this.classify = function(arg){
 			function classifyOne(cls, flag, time){
-				var selector = '.' + cls, toAdd = ' ' + cls;
+				var selector = '.' + cls;
 				if (flag == 'toggle'){
 					//	Special second parameter option.
 					f = function(e, i){
@@ -1202,19 +1211,20 @@ function createToolkit(){
 					}
 				}
 				self.iter(function(e, i){
-					var actualFlag = tk.resolve(flag, e, i);
+					var actualFlag = tk.resolve(flag, e, i),
+						classes = e.classes();
 					if (actualFlag){
 						//	Add.
 						if (!e.is(selector)){
-							e.set[0].className += toAdd;
+							classes.push(cls);
+							e.set[0].className = classes.join(' ').trim();
 						}
 					}
 					else {
 						//	Remove.
 						if (e.is(selector)){
-							var classes = e.classes();
 							classes.splice(classes.indexOf(cls), 1);
-							e.set[0].className = classes.join(' ');
+							e.set[0].className = classes.join(' ').trim();
 						}
 					}
 					var actualTime = tk.resolve(time, e, i);

@@ -48,10 +48,43 @@
 				.back();
 			}
 
+			function createRandomNumberList(listHolder){
+				return tk.tag('div')
+					.append([
+						tk.tag('div').css('background-color', 'red').bind(listHolder, 'list')
+							.placement(function(d, e){
+								e.css({
+									'width': Math.max.apply(null, d)*100,
+									'height': (1 - Math.min.apply(null, d))*100
+								});
+							})
+							.begin(),
+						tk.tag('h4').bind(listHolder, 'list')
+							.transform(function(d){ return d.length; })
+							.placement(function(d, e){ e.html('Count: ' + d); })
+							.begin(),
+						tk.tag('ol').bind(listHolder, 'list')
+							.placement(function(d, e){ 
+								e.append(
+									tk.comprehension(d, function(item){ return tk.tag('li').html(item) })
+								); 
+							})
+							.reset(function(d, e){ e.html(''); })
+							.begin()
+					])
+				.back();
+			}
+
+			var list = [];
+			tk.repeat(function(){
+				list.push(Math.random());
+			}, 500);
+
 			tk.init(function(){
-				tk('body').append(
-					tk.comprehension(articles, createArticle)
-				);
+				tk('body').append([
+					tk.comprehension(articles, createArticle),
+					createRandomNumberList({list: list})
+				]);
 			});
 		</script>
 	</head>
