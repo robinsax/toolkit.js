@@ -52,8 +52,8 @@ function createToolkit(){
 			preXHR: tk.fn.eatCall
 		},
 		requests: {
-			defaultSuccess: function(d, c){ tk.debug('Recieved (success: ' + c + '):', d); },
-			defaultFailure: function(d, c){ tk.debug('Recieved (failure: ' + c + '):', d); },
+			defaultSuccess: tk.fn.eatCall,
+			defaultFailure: tk.fn.eatCall,
 			defaultResponseParser: tk.fn.identity,
 			defaultMimetype: 'text/plain'
 		},
@@ -81,7 +81,7 @@ function createToolkit(){
 	//	Update the default configuration if a configuration parameter was 
 	//	passed.
 	if (arguments.length > 0){
-		updateConfig(arguments[0]);
+		updateConfig(tk.config, arguments[0]);
 	}
 
 	//	Define the default attribute names.
@@ -718,7 +718,7 @@ function createToolkit(){
 			}
 			
 			if (high){
-				list = []
+				list = [];
 				this.iter(function(e, i){
 					var parent = e.parentNode;
 					while (parent !== document){
@@ -749,7 +749,7 @@ function createToolkit(){
 				only immediate ones.
 		*/
 		this.children = function(){
-			if (arguments.length == 1){
+			if (arguments.length == 1 && typeof arguments[0] == 'boolean'){
 				//	`deep` flag only.
 				return this.children('*', arguments[0]);
 			}
@@ -1119,12 +1119,12 @@ function createToolkit(){
 						e.__listeners__ = [];
 					}
 					var add = {
-						event: tk.resolve(evt, e, i),
+						event: tk.resolve(event, e, i),
 						func: function(g){
 							func(new ToolkitSelection(e), g, i);
 						}
 					}
-					list.push(add)
+					e.__listeners__.push(add)
 					e.addEventListener(add.event, add.func);
 				}, false);
 			}
@@ -1641,20 +1641,22 @@ function createToolkit(){
 			//	Create XHR object.
 			var req = new XMLHttpRequest();
 
-			//	Set return callback.
-			req.onreadystatechange = function(){
-				if (this.readyState == 4){
-					var c = this.status, d = responseParser(this.responseText);
-					(c < 400 ? successFn : failureFn)(d, c);
-				}
-			}
-
 			//	Create query parameters.
 			if (queryParams != null){
 				url += '?' + tk.comprehension(queryParams, function(k, v){ 
 					return k + '=' + encodeURIComponent(v) 
 				}).join('&');
 			}
+
+			//	Set return callback.
+			req.onreadystatechange = function(){
+				if (this.readyState == 4){
+					var c = this.status, d = responseParser(this.responseText);
+					tk.debug('Received (' + method + ': ' + url + '): ' + c, d);
+					(c < 400 ? successFn : failureFn)(d, c);
+				}
+			}
+
 			req.open(method, url, true);
 			//	Set mimetype if body present.
 			if (body != null){
@@ -1665,7 +1667,9 @@ function createToolkit(){
 			}
 
 			//	Dispatch pre-fetch callback.
-			tk.config.callbacks.preXHR(req);
+			tk.config.callbacks.preXHR(req, method, url, body);
+
+			tk.debug('Sent (' + method + ': ' + url + ')', body);
 			
 			//	Send.
 			req.send(body);

@@ -1,8 +1,6 @@
 # toolkit.js
 
-* DOM inspection and manipulation helpers
-* Live data-DOM mappings
-* AJAX
+*README* coming soon.
 
 Author Robin Saxifrage | https://github.com/robinsax/toolkit.js
 
