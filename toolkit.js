@@ -1291,7 +1291,7 @@ function createToolkit(){
 						self.set[0].appendChild(g.set[0]);
 						tk.config.callbacks.preInsert(e);
 					});
-					e.pare = this;
+					e.origin = this;
 					return e;
 				case 2:
 					self.set[0].appendChild(e);
@@ -1327,13 +1327,13 @@ function createToolkit(){
 					e.reverse().iter(function(g){
 						g.remove();
 						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-						config.bindFunction(g);
+						config.config.callbacks.preInsert(g);
 					});
 					e.origin = this;
 					return e;
 				case 2:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
-					config.bindFunction(e);
+					config.callbacks.preInsert(e);
 					return new ToolkitSelection(e, this);
 			}
 		}
