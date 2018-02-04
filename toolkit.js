@@ -539,7 +539,7 @@ function createToolkit(){
 		//	Store reference to `this`.
 		var self = this;
 
-		var origin = tk.varg(arguments, 1, null);
+		this.origin = tk.varg(arguments, 1, null);
 		
 		//	Resolve the selection.
 		this.set = (function(){
@@ -594,10 +594,10 @@ function createToolkit(){
 			```
 		*/
 		this.back = function(){
-			if (origin == null){
+			if (this.origin == null){
 				throw 'Illegal back()';
 			}
-			return origin;
+			return this.origin;
 		}
 
 		/*
@@ -1291,7 +1291,7 @@ function createToolkit(){
 						self.set[0].appendChild(g.set[0]);
 						tk.config.callbacks.preInsert(e);
 					});
-					e.backP = this;
+					e.pare = this;
 					return e;
 				case 2:
 					self.set[0].appendChild(e);
@@ -1329,7 +1329,7 @@ function createToolkit(){
 						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
 						config.bindFunction(g);
 					});
-					e.backP = this;
+					e.origin = this;
 					return e;
 				case 2:
 					self.set[0].insertBefore(e, this.set[0].firstChild);
