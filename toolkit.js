@@ -141,14 +141,13 @@ function createToolkit(){
 	tk.iter = function(target, func){
 		switch (tk.typeCheck(target, [Array, 'object'])){
 			case 0:
-			case 1:
 				for (var i = 0; i < target.length; i++){
 					if (func(target[i], i) === false){
 						break;
 					}
 				}
 				return;
-			case 2:
+			case 1:
 				for (var key in target){
 					if (func(key, target[key]) === false){
 						break;
