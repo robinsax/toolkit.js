@@ -139,15 +139,16 @@ function createToolkit(){
 		:func The function to call at each iteration.
 	*/
 	tk.iter = function(target, func){
-		switch (tk.typeCheck(target, [Array, 'object'])){
+		switch (tk.typeCheck(target, [NodeList, Array, 'object'])){
 			case 0:
+			case 1:
 				for (var i = 0; i < target.length; i++){
 					if (func(target[i], i) === false){
 						break;
 					}
 				}
 				return;
-			case 1:
+			case 2:
 				for (var key in target){
 					if (func(key, target[key]) === false){
 						break;
