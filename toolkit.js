@@ -1608,6 +1608,7 @@ function createToolkit(){
 			failureFn = tk.config.requests.defaultFailure,
 			mimetype = tk.config.requests.defaultMimetype,
 			responseParser = tk.config.requests.defaultResponseParser,
+			pureBody = null,
 			body = null,
 			queryParams = null;
 		
@@ -1633,6 +1634,7 @@ function createToolkit(){
 
 		this.json = function(object){
 			mimeType = 'application/json';
+			pureBody = object;
 			body = JSON.stringify(object);
 			return this;
 		}
@@ -1669,7 +1671,7 @@ function createToolkit(){
 			//	Dispatch pre-fetch callback.
 			tk.config.callbacks.preXHR(req, method, url, body);
 
-			tk.debug('Sent (' + method + ': ' + url + ')', body);
+			tk.debug('Sent (' + method + ': ' + url + ')', pureBody);
 			
 			//	Send.
 			req.send(body);
