@@ -694,7 +694,7 @@ function createToolkit(){
 				only immediate ones.
 		*/
 		this.parents = function(){
-			if (arguments.length == 1){
+			if (arguments.length == 1 && typeof arguments[0] == 'boolean'){
 				//	`high` flag only.
 				//	TODO: Better impl.
 				return this.parents('*', arguments[0]);
@@ -712,7 +712,7 @@ function createToolkit(){
 			function filter(e, i){
 				return (
 					(reducer == null) || 
-					(reducerType == 1 &&  parent.matches(reducer)) ||
+					(reducerType == 1 &&  e.matches(reducer)) ||
 					(reducerType == 2 && reducer(e, i))
 				);
 			}
@@ -1455,7 +1455,7 @@ function createToolkit(){
 			var e = this.set[0];
 			var box = e.getBoundingClientRect();
 			var size = {width: box.width, height: box.height};
-			if (varg(arguments, 0, false)){
+			if (tk.varg(arguments, 0, false)){
 				var style = window.getComputedStyle(e, null);
 				//	Add margin
 				size.width 
