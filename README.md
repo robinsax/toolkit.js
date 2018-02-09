@@ -1,7 +1,5 @@
 # toolkit.js
+Author: Robin Saxifrage
+License: Apache 2.0
 
 *README* coming soon.
-
-Author Robin Saxifrage | https://github.com/robinsax/toolkit.js
-
-Licensed under Apache 2.0

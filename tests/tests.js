@@ -14,9 +14,22 @@ tk.init(function(){
         .html(function(e){ return 'I am a ' + e.tag()});
 
     window.x = [1, 2, 3];
-    tk.arrayBinding(x)
-        .add(function(d, i){ console.log('added ' + d + ' ' + i); })
-        .remove(function(d, i){ console.log('removed ' + d + ' ' + i); })
-        .modify(function(d, i){ console.log('modified ' + d + ' ' + i); })
-        .begin();
+    tk.binding(x)
+        .added(function(d, i){ console.log('added ' + d + ' ' + i); })
+        .removed(function(d, i){ console.log('removed ' + d + ' ' + i); })
+        .changed(function(d, i){ console.log('modified ' + d + ' ' + i); })
+		.begin();
+		
+	window.y = {
+		a: 'b'
+	};
+	tk.binding(y, 'a')
+		.onto(tk('body').append(tk.tag('div')))
+		.and().begin();
+
+	window.z = [1, 2, 3];
+	tk.binding(z)
+		.onto(tk('body').append(tk.tag('ul')))
+			.tag('li')
+		.and().begin();
 });
