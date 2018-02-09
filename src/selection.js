@@ -150,9 +150,10 @@ function ToolkitSelection(selection){
 
 		var parents = [];
 		function filter(e, i){
-			return 
-				(reducerType == 0 && (e.matches || e.msMatchesSelector)(reducer)) ||
-				reducer(e, i);
+			return (
+				(reduction == 0 && e.matches(reducer)) ||
+				(reduction == 1 && reducer(e, i))
+			);
 		}
 
 		this.iter(function(e, i){
@@ -500,7 +501,7 @@ function ToolkitSelection(selection){
 			}, false);
 		}
 
-		switch (tk.typeCheck(arg, 'function', 'object')){
+		switch (tk.typeCheck(arg, 'string', 'object')){
 			case 0:
 				//	Single set.
 				setOne(arg, arguments[1]);

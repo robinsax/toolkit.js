@@ -41,6 +41,22 @@ function createToolkit(){
 		}
 	}
 
+	function applyOverride(src, dest){
+		for (var key in src){
+			if (typeof dest[key] == 'object'){
+				applyOverride(src[key], dest[key]);
+			}
+			else {
+				dest[key] = src[key];
+			}
+		}
+	}
+
+	if (arguments.length > 0){
+		applyOverride(arguments[0], tk.config);
+	}
+
+
 	/* ---- Core utility functions ---- */
 	tk.varg = function(args, i, defaultValue){
 		/*
@@ -249,6 +265,10 @@ function createToolkit(){
 		return comprehension;
 	}
 
+	tk.defer = function(func, milliseconds){
+		setTimeout(func, milliseconds);
+	}
+
 	tk.init = function(initFunction){
 		tk.initFunctions.push(initFunction);
 	}
@@ -417,9 +437,10 @@ function createToolkit(){
 	
 			var parents = [];
 			function filter(e, i){
-				return 
-					(reducerType == 0 && (e.matches || e.msMatchesSelector)(reducer)) ||
-					reducer(e, i);
+				return (
+					(reduction == 0 && e.matches(reducer)) ||
+					(reduction == 1 && reducer(e, i))
+				);
 			}
 	
 			this.iter(function(e, i){
@@ -767,7 +788,7 @@ function createToolkit(){
 				}, false);
 			}
 	
-			switch (tk.typeCheck(arg, 'function', 'object')){
+			switch (tk.typeCheck(arg, 'string', 'object')){
 				case 0:
 					//	Single set.
 					setOne(arg, arguments[1]);
@@ -1311,23 +1332,23 @@ function createToolkit(){
 	
 		this.begin = function(){
 			//  Ensure bindings map exists.
-			if (!tk.prop(host, '__bindings__')){
-				host.__bindings__ = {};
+			if (!tk.prop(this.host, '__bindings__')){
+				this.host.__bindings__ = {};
 			}
 			
 			//  Ensure a list exists for this binding.
-			if (!tk.prop(host.__bindings__, property)){
+			if (!tk.prop(this.host.__bindings__, property)){
 				//  Attach the listener.
-				host.__bindings__[property] = [];
-				var descriptor = this._createListener(host.__bindings__[property], host[property]);
-				Object.defineProperty(host, property, descriptor);
+				this.host.__bindings__[property] = [];
+				var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
+				Object.defineProperty(this.host, property, descriptor);
 			}
 	
 			//	Add the binding.
-			host.__bindings__[property].push(this._processChange);
+			this.host.__bindings__[property].push(this._processChange);
 			
 			//	Apply initial.
-			this._processChange(host[property]);
+			this._processChange(this.host[property]);
 	
 			return this;
 		}

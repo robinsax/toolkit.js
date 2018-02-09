@@ -78,23 +78,23 @@ function PropertyBinding(host, property){
 
 	this.begin = function(){
 		//  Ensure bindings map exists.
-		if (!tk.prop(host, '__bindings__')){
-			host.__bindings__ = {};
+		if (!tk.prop(this.host, '__bindings__')){
+			this.host.__bindings__ = {};
 		}
 		
 		//  Ensure a list exists for this binding.
-		if (!tk.prop(host.__bindings__, property)){
+		if (!tk.prop(this.host.__bindings__, property)){
 			//  Attach the listener.
-			host.__bindings__[property] = [];
-			var descriptor = this._createListener(host.__bindings__[property], host[property]);
-			Object.defineProperty(host, property, descriptor);
+			this.host.__bindings__[property] = [];
+			var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
+			Object.defineProperty(this.host, property, descriptor);
 		}
 
 		//	Add the binding.
-		host.__bindings__[property].push(this._processChange);
+		this.host.__bindings__[property].push(this._processChange);
 		
 		//	Apply initial.
-		this._processChange(host[property]);
+		this._processChange(this.host[property]);
 
 		return this;
 	}

@@ -35,6 +35,22 @@ function createToolkit(){
 		}
 	}
 
+	function applyOverride(src, dest){
+		for (var key in src){
+			if (typeof dest[key] == 'object'){
+				applyOverride(src[key], dest[key]);
+			}
+			else {
+				dest[key] = src[key];
+			}
+		}
+	}
+
+	if (arguments.length > 0){
+		applyOverride(arguments[0], tk.config);
+	}
+
+
 	/* ---- Core utility functions ---- */
 	tk.varg = function(args, i, defaultValue){
 		/*
@@ -241,6 +257,10 @@ function createToolkit(){
 			}
 		}
 		return comprehension;
+	}
+
+	tk.defer = function(func, milliseconds){
+		setTimeout(func, milliseconds);
 	}
 
 	tk.init = function(initFunction){
