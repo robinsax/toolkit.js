@@ -263,7 +263,3 @@ tk.binding = function(host){
 		return new PropertyBinding(host, property);
 	}
 }
-
-tk.arrayBinding = function(ary){
-	return new ArrayBinding(ary);
-}

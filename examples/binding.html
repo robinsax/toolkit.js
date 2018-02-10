@@ -3,7 +3,7 @@
 	<head>
 		<script src="../toolkit.js"></script>
 		<script defer>
-			var tk = createToolkit();
+			var tk = createToolkit({debug: true});
 
 			var articles = [
 				{
@@ -26,65 +26,25 @@
 				}
 			];
 
-			function createArticle(article){
-				return tk.tag('div').classify('article', true)
-					.bind(article, 'color')
-						.placement(function(d, e){ e.css('background-color', d); })
-						.begin()
-					.append([
-						tk.tag('h3').bind(article, 'title')
-							.transform(function(d){ return d.toUpperCase(); })
-							.begin(),
-						tk.tag('p').bind(article, 'content').begin(),
-						tk.tag('ul').bind(article, 'comments')
-							.placement(function(d, e){
-								e.append(
-									tk.comprehension(d, function(item){ return tk.tag('li').html(item) })
-								);
-							})
-							.reset(function(d, e){ e.html(''); })
-							.begin()
-					])
-				.back();
-			}
+			/*
+				FIX: 
+					articles[0] = {title: 'hola'};
 
-			function createRandomNumberList(listHolder){
-				return tk.tag('div')
-					.append([
-						tk.tag('div').css('background-color', 'red').bind(listHolder, 'list')
-							.placement(function(d, e){
-								e.css({
-									'width': Math.max.apply(null, d)*100,
-									'height': (1 - Math.min.apply(null, d))*100
-								});
-							})
-							.begin(),
-						tk.tag('h4').bind(listHolder, 'list')
-							.transform(function(d){ return d.length; })
-							.placement(function(d, e){ e.html('Count: ' + d); })
-							.begin(),
-						tk.tag('ol').bind(listHolder, 'list')
-							.placement(function(d, e){ 
-								e.append(
-									tk.comprehension(d, function(item){ return tk.tag('li').html(item) })
-								); 
-							})
-							.reset(function(d, e){ e.html(''); })
-							.begin()
-					])
-				.back();
-			}
-
-			var list = [];
-			tk.repeat(function(){
-				list.push(Math.random());
-			}, 500);
+			*/
 
 			tk.init(function(){
-				tk('body').append([
-					tk.comprehension(articles, createArticle),
-					createRandomNumberList({list: list})
-				]);
+				tk.binding(articles)
+					.onto(tk('body'))
+						.tag('div')
+						.placement(function(article, e){
+							tk.binding(article, 'title')
+								.onto(e.append(tk.tag('h2')))
+								.transform(function(title){
+									return title.toUpperCase();
+								})
+							.and().begin();
+						})
+				.and().begin();
 			});
 		</script>
 	</head>
