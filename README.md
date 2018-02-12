@@ -1,6 +1,4 @@
 # toolkit.js
-Author: Robin Saxifrage
-License: Apache 2.0
 
 toolkit.js is a JavaScript helper library which aims to make some of the 
 most common tasks in modern front-end web development easier. Namely,
