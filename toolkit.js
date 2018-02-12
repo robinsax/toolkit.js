@@ -18,6 +18,13 @@ function createToolkit(){
 		return new ToolkitSelection(selection);
 	}
 
+	Object.defineProperty(tk, 'here', {
+		get: function(){
+			tk.log('here');
+			return 'here';
+		}
+	})
+
 	tk.initFunctions = [];
 
 	/* ---- Function definitions ---- */
@@ -27,7 +34,8 @@ function createToolkit(){
 		contradiction: function(){ return false; },
 		tautology: function(){ return true; },
 		resign: function(a){ return -a; },
-		negation: function(a){ return !a; }
+		negation: function(a){ return !a; },
+		call: function(a){ return a(); }
 	}
 
 	/* ---- Default configuration ---- */
@@ -53,7 +61,7 @@ function createToolkit(){
 	}
 
 	if (arguments.length > 0){
-		applyOverride(tk.config, arguments[0]);
+		applyOverride(arguments[0], tk.config);
 	}
 
 
@@ -152,6 +160,9 @@ function createToolkit(){
 					}
 				}
 				catch (e){}
+			}
+			if (check == 'any'){
+				return i - 1;
 			}
 		}
 		//	No match found, create and throw a formatted error.
@@ -274,12 +285,12 @@ function createToolkit(){
 	}
 
 	if (/complete|loaded|interactive/.test(document.readyState)){
-		tk.iter(tk.initFunctions, function(f){ f(); });
+		tk.iter(tk.initFunctions, tk.fn.call);
 	}
 	else {
 		if (window){
 			window.addEventListener('DOMContentLoaded', function(){
-				tk.iter(tk.initFunctions, function(f){ f(); });
+				tk.iter(tk.initFunctions, tk.fn.call);
 			});
 		}
 	}
@@ -919,7 +930,7 @@ function createToolkit(){
 				
 				::firstonly
 			*/
-			switch (tk.typeCheck(arg, Array, ToolkitSelection, Element)){
+			switch (tk.typeCheck(arg, Array, ToolkitSelection, 'string', Element)){
 				case 0:
 					var set = [];
 					//	Collect.
@@ -948,6 +959,8 @@ function createToolkit(){
 					arg.origin = this;
 					return arg;
 				case 2:
+					arg = document.createElement(arg);
+				case 3:
 					self.set[0].appendChild(arg);
 					tk.config.callbacks.preInsert(arg);
 					return new ToolkitSelection(arg, this);
@@ -1191,8 +1204,11 @@ function createToolkit(){
 				status = xhr.status,
 				responseData = null;
 			switch (contentType){
+				case 'text/plain':
+					break;
 				case 'application/json':
 					responseData = JSON.parse(xhr.responseText)
+					break;
 				default:
 					throw 'Unknown response content type (' + contentType + ')';
 			}
@@ -1230,8 +1246,11 @@ function createToolkit(){
 				//	Process body.
 				//	TODO: More;
 				switch (this.mimetype){
+					case 'text/plain':
+						break;
 					case 'application/json':
 						processedBody = JSON.stringify(this.body);
+						break;
 					default:
 						throw 'Unknown request content type (' + this.mimetype + ')';
 				}
@@ -1290,12 +1309,18 @@ function createToolkit(){
 	
 		this.and = function(){
 			parent.changed(this._applyChange);
-			return this.parent;
+			return this.parent.and();
+		}
+	
+		this.begin = function(){
+			parent.changed(this._applyChange);
+			return this.parent.begin();
 		}
 	}
 	
 	function PropertyBinding(host, property){
 		var self = this;
+		this.source = tk.varg(arguments, 2, null);
 		this.host = host;
 		this.property = property;
 		this.fns = {
@@ -1330,18 +1355,27 @@ function createToolkit(){
 			return new ElementPropertyBinding(this, element);
 		}
 	
+		this.and = function(){
+			return new PropertyBinding(this.host, this.property, this);
+		}
+	
 		this.begin = function(){
-			//  Ensure bindings map exists.
-			if (!tk.prop(this.host, '__bindings__')){
-				this.host.__bindings__ = {};
+			if (this.source != null){
+				this.source.begin();
 			}
-			
-			//  Ensure a list exists for this binding.
-			if (!tk.prop(this.host.__bindings__, property)){
-				//  Attach the listener.
-				this.host.__bindings__[property] = [];
-				var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
-				Object.defineProperty(this.host, property, descriptor);
+			else {
+				//  Ensure bindings map exists.
+				if (!tk.prop(this.host, '__bindings__')){
+					this.host.__bindings__ = {};
+				}
+				
+				//  Ensure a list exists for this binding.
+				if (!tk.prop(this.host.__bindings__, property)){
+					//  Attach the listener.
+					this.host.__bindings__[property] = [];
+					var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
+					Object.defineProperty(this.host, property, descriptor);
+				}
 			}
 	
 			//	Add the binding.
@@ -1366,6 +1400,9 @@ function createToolkit(){
 				e.remove();
 			},
 			transform: tk.fn.identity,
+			reset: function(d, e, i){
+				e.html('');
+			},
 			placement: function(d, e, i){
 				e.html(d);
 			}
@@ -1391,6 +1428,7 @@ function createToolkit(){
 		this._applyChanged = function(value, index){
 			//	TODO: Better.
 			var target = self.element.children(false).ith(index);
+			self.fns.reset(value, target, index);
 			self.fns.placement(self.fns.transform(value), target, index);
 		}
 	
@@ -1409,16 +1447,29 @@ function createToolkit(){
 			return this;
 		}
 	
+		this.reset = function(callback){
+			this.fns.placement = callback;
+			return this;
+		}
+	
 		this.and = function(){
 			parent.changed(this._applyChanged);
 			parent.removed(this._applyRemove);
 			parent.added(this._applyAdd);
-			return this.parent;
+			return this.parent.and();
+		}
+	
+		this.begin = function(){
+			parent.changed(this._applyChanged);
+			parent.removed(this._applyRemove);
+			parent.added(this._applyAdd);
+			return this.parent.begin();
 		}
 	}
 	
 	function ArrayBinding(ary){
 		var self = this;
+		this.source = tk.varg(arguments, 1, null);
 		this.ary = ary;
 		this.fns = {
 			added: tk.fn.eatCall,
@@ -1466,7 +1517,15 @@ function createToolkit(){
 			return new ElementArrayBinding(this, element);
 		}
 	
+		this.and = function(element){
+			return new ArrayBinding(this.ary, this);
+		}
+	
 		this.begin = function(){
+			if (this.source != null){
+				this.source.begin();
+			}
+	
 			//	Install listensers.
 			var innerPush = this.ary.push;
 			this.ary.push = function(){
@@ -1517,9 +1576,28 @@ function createToolkit(){
 			return new PropertyBinding(host, property);
 		}
 	}
+	tk.binding.on = function(host){
+		return function(property){
+			return tk.binding(host, property);
+		}
+	}
 	
-	tk.arrayBinding = function(ary){
-		return new ArrayBinding(ary);
+	tk.unbound = function(arg){
+		switch(tk.typeCheck(arg, Array, 'object', 'any')){
+			case 0:
+				return tk.comprehension(arg, tk.unbound);
+			case 1:
+				var copy = {};
+				tk.iter(arg, function(key, value){
+					if (key.startsWith('__')){
+						return;
+					}
+					copy[key] = tk.unbound(value);
+				});
+				return copy;
+			case 2:
+				return arg;
+		}
 	}
 	
 

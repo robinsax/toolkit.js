@@ -50,8 +50,11 @@ function Request(method, url){
 			status = xhr.status,
 			responseData = null;
 		switch (contentType){
+			case 'text/plain':
+				break;
 			case 'application/json':
 				responseData = JSON.parse(xhr.responseText)
+				break;
 			default:
 				throw 'Unknown response content type (' + contentType + ')';
 		}
@@ -89,8 +92,11 @@ function Request(method, url){
 			//	Process body.
 			//	TODO: More;
 			switch (this.mimetype){
+				case 'text/plain':
+					break;
 				case 'application/json':
 					processedBody = JSON.stringify(this.body);
+					break;
 				default:
 					throw 'Unknown request content type (' + this.mimetype + ')';
 			}

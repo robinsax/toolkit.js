@@ -12,6 +12,13 @@ function createToolkit(){
 		return new ToolkitSelection(selection);
 	}
 
+	Object.defineProperty(tk, 'here', {
+		get: function(){
+			tk.log('here');
+			return 'here';
+		}
+	})
+
 	tk.initFunctions = [];
 
 	/* ---- Function definitions ---- */
@@ -21,7 +28,8 @@ function createToolkit(){
 		contradiction: function(){ return false; },
 		tautology: function(){ return true; },
 		resign: function(a){ return -a; },
-		negation: function(a){ return !a; }
+		negation: function(a){ return !a; },
+		call: function(a){ return a(); }
 	}
 
 	/* ---- Default configuration ---- */
@@ -47,7 +55,7 @@ function createToolkit(){
 	}
 
 	if (arguments.length > 0){
-		applyOverride(tk.config, arguments[0]);
+		applyOverride(arguments[0], tk.config);
 	}
 
 
@@ -146,6 +154,9 @@ function createToolkit(){
 					}
 				}
 				catch (e){}
+			}
+			if (check == 'any'){
+				return i - 1;
 			}
 		}
 		//	No match found, create and throw a formatted error.
@@ -268,12 +279,12 @@ function createToolkit(){
 	}
 
 	if (/complete|loaded|interactive/.test(document.readyState)){
-		tk.iter(tk.initFunctions, function(f){ f(); });
+		tk.iter(tk.initFunctions, tk.fn.call);
 	}
 	else {
 		if (window){
 			window.addEventListener('DOMContentLoaded', function(){
-				tk.iter(tk.initFunctions, function(f){ f(); });
+				tk.iter(tk.initFunctions, tk.fn.call);
 			});
 		}
 	}

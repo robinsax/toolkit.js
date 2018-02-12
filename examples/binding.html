@@ -27,9 +27,14 @@
 			];
 
 			/*
-				FIX: 
-					articles[0] = {title: 'hola'};
+				TODO:
+				AJAX JSON response binding via:
 
+				tk.request()
+					.binding()
+						.onto(tk('body'))
+						.and()
+					.sendAndBegin();
 			*/
 
 			tk.init(function(){
@@ -37,14 +42,41 @@
 					.onto(tk('body'))
 						.tag('div')
 						.placement(function(article, e){
-							tk.binding(article, 'title')
-								.onto(e.append(tk.tag('h2')))
-								.transform(function(title){
-									return title.toUpperCase();
+							var binding = tk.binding.on(article);
+
+							binding('title')
+								.onto(e.append('h2'))
+									.transform(function(title){
+										return title.toUpperCase();
+									})
+								.and()
+								.changed(function(d){
+									tk.log('Title changed to: ' + d);
 								})
-							.and().begin();
+							.begin();
+
+							binding('content')
+								.onto(e.append('p'))
+							.begin();
+
+							binding('color')
+								.changed(function(d){
+									e.css('color', d);
+								})
+							.begin();
+
+							binding('comments')
+								.changed(function(d){
+									e.children('ul').remove();
+									tk.binding(d)
+										.onto(e.append('ul'))
+											.tag('li')
+									.begin();
+								})
+							.begin()
 						})
-				.and().begin();
+					.and()
+				.begin();
 			});
 		</script>
 	</head>

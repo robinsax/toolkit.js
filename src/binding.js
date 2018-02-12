@@ -36,12 +36,18 @@ function ElementPropertyBinding(parent, element){
 
 	this.and = function(){
 		parent.changed(this._applyChange);
-		return this.parent;
+		return this.parent.and();
+	}
+
+	this.begin = function(){
+		parent.changed(this._applyChange);
+		return this.parent.begin();
 	}
 }
 
 function PropertyBinding(host, property){
 	var self = this;
+	this.source = tk.varg(arguments, 2, null);
 	this.host = host;
 	this.property = property;
 	this.fns = {
@@ -76,18 +82,27 @@ function PropertyBinding(host, property){
 		return new ElementPropertyBinding(this, element);
 	}
 
+	this.and = function(){
+		return new PropertyBinding(this.host, this.property, this);
+	}
+
 	this.begin = function(){
-		//  Ensure bindings map exists.
-		if (!tk.prop(this.host, '__bindings__')){
-			this.host.__bindings__ = {};
+		if (this.source != null){
+			this.source.begin();
 		}
-		
-		//  Ensure a list exists for this binding.
-		if (!tk.prop(this.host.__bindings__, property)){
-			//  Attach the listener.
-			this.host.__bindings__[property] = [];
-			var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
-			Object.defineProperty(this.host, property, descriptor);
+		else {
+			//  Ensure bindings map exists.
+			if (!tk.prop(this.host, '__bindings__')){
+				this.host.__bindings__ = {};
+			}
+			
+			//  Ensure a list exists for this binding.
+			if (!tk.prop(this.host.__bindings__, property)){
+				//  Attach the listener.
+				this.host.__bindings__[property] = [];
+				var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
+				Object.defineProperty(this.host, property, descriptor);
+			}
 		}
 
 		//	Add the binding.
@@ -112,6 +127,9 @@ function ElementArrayBinding(parent, element){
 			e.remove();
 		},
 		transform: tk.fn.identity,
+		reset: function(d, e, i){
+			e.html('');
+		},
 		placement: function(d, e, i){
 			e.html(d);
 		}
@@ -137,6 +155,7 @@ function ElementArrayBinding(parent, element){
 	this._applyChanged = function(value, index){
 		//	TODO: Better.
 		var target = self.element.children(false).ith(index);
+		self.fns.reset(value, target, index);
 		self.fns.placement(self.fns.transform(value), target, index);
 	}
 
@@ -155,16 +174,29 @@ function ElementArrayBinding(parent, element){
 		return this;
 	}
 
+	this.reset = function(callback){
+		this.fns.placement = callback;
+		return this;
+	}
+
 	this.and = function(){
 		parent.changed(this._applyChanged);
 		parent.removed(this._applyRemove);
 		parent.added(this._applyAdd);
-		return this.parent;
+		return this.parent.and();
+	}
+
+	this.begin = function(){
+		parent.changed(this._applyChanged);
+		parent.removed(this._applyRemove);
+		parent.added(this._applyAdd);
+		return this.parent.begin();
 	}
 }
 
 function ArrayBinding(ary){
 	var self = this;
+	this.source = tk.varg(arguments, 1, null);
 	this.ary = ary;
 	this.fns = {
 		added: tk.fn.eatCall,
@@ -212,7 +244,15 @@ function ArrayBinding(ary){
 		return new ElementArrayBinding(this, element);
 	}
 
+	this.and = function(element){
+		return new ArrayBinding(this.ary, this);
+	}
+
 	this.begin = function(){
+		if (this.source != null){
+			this.source.begin();
+		}
+
 		//	Install listensers.
 		var innerPush = this.ary.push;
 		this.ary.push = function(){
@@ -261,5 +301,28 @@ tk.binding = function(host){
 	else {
 		var property = tk.varg(arguments, 1);
 		return new PropertyBinding(host, property);
+	}
+}
+tk.binding.on = function(host){
+	return function(property){
+		return tk.binding(host, property);
+	}
+}
+
+tk.unbound = function(arg){
+	switch(tk.typeCheck(arg, Array, 'object', 'any')){
+		case 0:
+			return tk.comprehension(arg, tk.unbound);
+		case 1:
+			var copy = {};
+			tk.iter(arg, function(key, value){
+				if (key.startsWith('__')){
+					return;
+				}
+				copy[key] = tk.unbound(value);
+			});
+			return copy;
+		case 2:
+			return arg;
 	}
 }

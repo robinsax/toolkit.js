@@ -632,7 +632,7 @@ function ToolkitSelection(selection){
 			
 			::firstonly
 		*/
-		switch (tk.typeCheck(arg, Array, ToolkitSelection, Element)){
+		switch (tk.typeCheck(arg, Array, ToolkitSelection, 'string', Element)){
 			case 0:
 				var set = [];
 				//	Collect.
@@ -661,6 +661,8 @@ function ToolkitSelection(selection){
 				arg.origin = this;
 				return arg;
 			case 2:
+				arg = document.createElement(arg);
+			case 3:
 				self.set[0].appendChild(arg);
 				tk.config.callbacks.preInsert(arg);
 				return new ToolkitSelection(arg, this);
