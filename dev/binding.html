@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<script src="../toolkit.js"></script>
+		<script defer>
+			var tk = createToolkit({debug: true});
+
+			var articles = [
+				{
+					title: 'Corporate business report 2022',
+					content: 'Makin\'.',
+					color: 'blue',
+					comments: [
+						'Nice!',
+						'Wow rlly!?',
+						'Lame.'
+					]
+				},
+				{
+					title: 'The environment is gone.',
+					content: 'Goodbye!',
+					color: 'green',
+					comments: [
+						'Wind enerjie.'
+					]
+				}
+			];
+
+			/*
+				TODO:
+				AJAX JSON response binding via:
+
+				tk.request()
+					.binding()
+						.onto(tk('body'))
+						.and()
+					.sendAndBegin();
+			*/
+
+			tk.init(function(){
+				tk('body').snap('+div>+h4:css(font-size $2):html&+p:html=$1', 'Snap', 'Make it quick', '100px');
+
+				tk('body').binding(articles)
+					.tag('div')
+					.placement(function(article, e){
+						e.binding.snap(article, {
+							title: '+*h2:text',
+							content: '+*p:text',
+							color: '$e:css(color)',
+							comments: function(c){
+								return c.changed(function(d){
+									e.binding.snap(d, '+*ul:wipe()>+*li($i):html');
+								});
+							}
+						});
+					})
+				.begin();
+			});
+		</script>
+	</head>
+	<body></body>
+</html>

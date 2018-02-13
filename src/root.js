@@ -29,7 +29,13 @@ function createToolkit(){
 		tautology: function(){ return true; },
 		resign: function(a){ return -a; },
 		negation: function(a){ return !a; },
-		call: function(a){ return a(); }
+		call: function(a){ return a(); },
+		cleanWhitespace: function(a){
+			return a.replace(/\s+/g, ' ').trim();
+		},
+		removeWhitespace: function(a){
+			return a.replace(/\s+/, '');
+		}
 	}
 
 	/* ---- Default configuration ---- */
@@ -288,6 +294,9 @@ function createToolkit(){
 			});
 		}
 	}
+
+	/* ---- Shorthand notation ---- */
+	/* ::insertsource snap.js */
 
 	/* ---- Selection ---- */
 	/* ::insertsource selection.js */

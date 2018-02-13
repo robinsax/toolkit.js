@@ -1,0 +1,17 @@
+Snap syntax.
+
+Syntax:
+	Policy:
+		[> or &]			#	Traversal policy.
+		[+ or -]			#	(Optional) Element policy; append or prepend.
+		*					#	(Optional) Make element policy lax. If the element
+							#	already exists, it will be selected instead of a
+							#	new one being created.
+	Element definition:
+		[tag name]			#	The tag name.
+		([index])			#	(Optional) The index.
+		#[id]				#	(Optional) The ID attribute.
+		.[classes]			#	(Optional) The classes.
+	Element modification:
+		:[target][=value]	#	A directive.
+		::[attr][=value]	#	An attribute assignment.

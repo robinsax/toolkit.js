@@ -658,7 +658,7 @@ function ToolkitSelection(selection){
 					self.set[0].appendChild(g.set[0]);
 					tk.config.callbacks.preInsert(g);
 				});
-				arg.origin = this;
+				arg.backChain = this;
 				return arg;
 			case 2:
 				arg = document.createElement(arg);
@@ -679,7 +679,7 @@ function ToolkitSelection(selection){
 			
 			::firstonly
 		*/
-		switch (typeCheck(e, Array, ToolkitSelection, Element)){
+		switch (tk.typeCheck(e, Array, ToolkitSelection, Element)){
 			case 0:
 				var set = [];
 				//	Collect.
@@ -700,16 +700,16 @@ function ToolkitSelection(selection){
 				});
 				return new ToolkitSelection(set, this);
 			case 1:
-				e.reverse().iter(function(g){
+				e.reversed().iter(function(g){
 					g.remove();
 					self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-					config.config.callbacks.preInsert(g);
+					tk.config.callbacks.preInsert(g);
 				});
-				e.origin = this;
+				e.backChain = this;
 				return e;
 			case 2:
 				self.set[0].insertBefore(e, this.set[0].firstChild);
-				config.callbacks.preInsert(e);
+				tk.config.callbacks.preInsert(e);
 				return new ToolkitSelection(e, this);
 		}
 	}
@@ -850,5 +850,20 @@ function ToolkitSelection(selection){
 			}
 		}
 		return size;
+	}
+
+	this.snap = function(shorthand){
+		var variables = [].slice.call(arguments);
+		variables.splice(0, 1);
+		return tk.snap.apply(tk, [shorthand, this].concat(variables));
+	}
+
+	this.binding = function(){
+		return tk.binding.apply(tk, arguments)
+			.onto(this);
+	}
+	this.binding.snap = function(){
+		var args = [].slice.call(arguments);
+		return tk.binding.snap.apply(tk, [self].concat(args));
 	}
 }

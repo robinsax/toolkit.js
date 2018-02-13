@@ -308,6 +308,50 @@ tk.binding.on = function(host){
 		return tk.binding(host, property);
 	}
 }
+tk.binding.snap = function(rootElement, host, bindings){
+	switch (tk.typeCheck(host, Array, 'object')){
+		case 0:
+			if (typeof bindings == 'string'){
+				bindings = {add: bindings};
+			}
+
+			var binding = tk.binding(host)
+				.onto(rootElement);
+			
+			if (tk.prop(bindings, 'add')){
+				binding.placement(function(d, e, i){
+					tk.snap(bindings.add, e, d, {
+						d: d,
+						i: i
+					});
+				});
+			}
+			binding.begin();
+
+		case 1:
+			var binding = tk.binding.on(host);
+
+			tk.iter(bindings, function(property, bound){
+				switch (tk.typeCheck(bound, 'string', 'function')){
+					case 0:
+						binding(property)
+							.onto(rootElement)
+								.placement(function(d, e, i){
+									tk.snap(bound, e, d, {
+										d: d,
+										i: i
+									});
+								})
+							.begin();
+						break;
+					case 1:
+						bound(binding(property)).begin();
+						break;
+				}
+			});
+			break;
+	}
+}
 
 tk.unbound = function(arg){
 	switch(tk.typeCheck(arg, Array, 'object', 'any')){
