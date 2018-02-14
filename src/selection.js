@@ -588,7 +588,7 @@ function ToolkitSelection(selection){
 				var actualTime = tk.resolve(time, e, i);
 				if (actualTime >= 0){
 					//	Reverse the classification later.
-					tk.defer(function(){
+					tk.timeout(function(){
 						classifyOne(cls, !actualFlag, -1);
 					}, actualTime);
 				}

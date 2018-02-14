@@ -276,10 +276,6 @@ function createToolkit(){
 		return comprehension;
 	}
 
-	tk.defer = function(func, milliseconds){
-		setTimeout(func, milliseconds);
-	}
-
 	tk.init = function(initFunction){
 		tk.initFunctions.push(initFunction);
 	}
@@ -294,6 +290,9 @@ function createToolkit(){
 			});
 		}
 	}
+
+	/* ---- Delay ---- */
+	/* ::insertsource delay.js */
 
 	/* ---- Shorthand notation ---- */
 	/* ::insertsource snap.js */
