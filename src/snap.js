@@ -1,4 +1,34 @@
 tk.snap = function(shorthand, rootElement){
+	var oArguments = [].slice.call(arguments);
+	oArguments.splice(0, 2);
+
+	var timeoutMatcher = /\.\.\.\(([0-9]+)\)/;
+	if (timeoutMatcher.test(shorthand)){
+		//	Includes sleeps.
+		var steps = shorthand.split(timeoutMatcher),
+			isTimeout = false,
+			timeout = 0,
+			returnValue;
+		tk.iter(steps, function(step, i){
+			if (isTimeout){
+				timeout += step;
+			}
+			else {
+				if (timeout > 0){
+					tk.timeout(function(){
+						tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
+					}, timeout);
+				}
+				else {
+					returnValue = tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
+				}
+			}
+
+			isTimeout = !isTimeout;
+		});
+
+		return returnValue;
+	}
 
 	//	Collect variables.
 	var variables = {
@@ -6,7 +36,7 @@ tk.snap = function(shorthand, rootElement){
 	};
 	for (var i = 2; i < arguments.length; i++){
 		var arg = arguments[i];
-		if (typeof arg == 'object'){
+		if (typeof arg == 'object' && arg !== null){
 			for (var name in arg){
 				variables['$' + name] = arg[name];
 			}
@@ -17,14 +47,32 @@ tk.snap = function(shorthand, rootElement){
 	}
 
 	function resolveVariable(variable){
+		var expression;
+
 		//	Resolve values.
 		if (variable.length == 0){
 			variable = '$0';
 		}
+		else if (expression = /([a-z]+)\((.*?)\)/.exec(variable)){
+			//	Function call.
+			switch(expression[1]){
+				case 'null':
+					variable = resolveVariable(expression[2]) === null;
+					break;
+				case 'notnull':
+					variable = resolveVariable(expression[2]) !== null;
+					break;
+				default:
+					throw 'No such function: ' + expression[1];
+			}
+		}
 		
 		if (variable[0] == '$'){
-			return variables[variable];
+			variable = variables[variable];
 		}
+
+		if (variable == 'true'){ return true; }
+		else if (variable == 'false'){ return false; }
 		return variable;
 	}
 
@@ -38,8 +86,16 @@ tk.snap = function(shorthand, rootElement){
 		else {
 			//	Check special cases.
 			var expression;
-			if (expression = /^css\(([$\w\-]+)((?:\s[$\w\-]+)|)\)$/.exec(left)){
+			if (expression = /^css\(([\w\-]+)((?:\s[$\w\-]+)|)\)$/.exec(left)){
 				element.css(expression[1], resolveVariable(expression[2].trim()));
+			}
+			else if (expression = /^class\(([$\w\-]+)((?:\s[$()\w\-]+)|)((?:\s[0-9]+)|)\)$/.exec(left)){
+				var time = expression[3].length == 0 ? -1 : parseInt(expression[3].trim());
+				element.classify(
+					resolveVariable(expression[1]),
+					resolveVariable(expression[2].trim()),
+					time
+				);
 			}
 			else {
 				switch (left){
@@ -65,7 +121,10 @@ tk.snap = function(shorthand, rootElement){
 			created.attr('id', idMod.substring(1))
 		}
 		if (classMod.length > 0){
-			created.classify(classMod.substring(1));
+			var classes = classMod.split('.');
+			for (var i = 1; i < classes.length; i++){
+				created.classify(classes[i]);
+			}
 		}
 		return created;
 	}
@@ -73,13 +132,14 @@ tk.snap = function(shorthand, rootElement){
 	shorthand += '&';
 	var depthFinder = /(.*?)([>&])/g,
 		element = rootElement,
-		depth;
+		depth,
+		last = element;
 	while (depth = depthFinder.exec(shorthand)){
 		var siblingMode = depth[2].length > 0 && depth[2] == '&',
 			item = depth[1];
 
 		//	Parse.
-		var match = /^([+\-]|)(\*|)([$a-z0-9]+)((?:\([$a-z0-9]+\))|)((?:#\w+)|)((?:\.\w+)|)((?:\:{1,2}[$\w\s\-()]+(?:=[$\w\s.]+){0,1})+|)$/.exec(item),
+		var match = /^([+\-]|)(\*|)([$a-z0-9]+)((?:\([$a-z0-9]+\))|)((?:#\w+)|)((?:\.[\w\-]+)+|)((?:\:{1,2}[$\w\s\-()]+(?:=[$\w\s.]+){0,1})+|)$/.exec(item),
 			resolve = function(){ return element; };
 
 		if (match == null){
@@ -164,9 +224,10 @@ tk.snap = function(shorthand, rootElement){
 
 		resolve();
 		if (siblingMode && element.backChain){
+			last = element;
 			element = element.back();
 		}
 	}
 
-	return element;
+	return last;
 }

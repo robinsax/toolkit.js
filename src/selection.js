@@ -65,6 +65,10 @@ function ToolkitSelection(selection){
 		return this.set[i];
 	}
 
+	this.first = function(){
+		return this.ith(0);
+	}
+
 	this.reversed = function(){
 		/*
 			Return a new `ToolkitSelection` selecting the same set, but in 
@@ -648,7 +652,10 @@ function ToolkitSelection(selection){
 				});
 				//	Insert.
 				tk.iter(set, function(e){
-					tk.config.callbacks.preInsert(new ToolkitSelection(e));
+					var selection = new ToolkitSelection(e, this);
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(selection);
+					});
 					self.set[0].appendChild(e);
 				});
 				return new ToolkitSelection(set, this);
@@ -656,7 +663,9 @@ function ToolkitSelection(selection){
 				arg.iter(function(g){
 					g.remove();
 					self.set[0].appendChild(g.set[0]);
-					tk.config.callbacks.preInsert(g);
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(g);
+					});
 				});
 				arg.backChain = this;
 				return arg;
@@ -664,8 +673,11 @@ function ToolkitSelection(selection){
 				arg = document.createElement(arg);
 			case 3:
 				self.set[0].appendChild(arg);
-				tk.config.callbacks.preInsert(arg);
-				return new ToolkitSelection(arg, this);
+				var selection = new ToolkitSelection(arg, this)
+				tk.iter(tk.inspectionFunctions, function(f){
+					f(selection);
+				});
+				return selection;
 		}
 	}
 
@@ -695,7 +707,10 @@ function ToolkitSelection(selection){
 				});
 				//	Insert.
 				tk.iter(set, function(e){
-					tk.config.callbacks.preInsert(new ToolkitSelection(e));
+					var selection = new ToolkitSelection(e, this);
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(selection);
+					});
 					self.set[0].insertBefore(e, self.set[0].firstChild);
 				});
 				return new ToolkitSelection(set, this);
@@ -703,14 +718,19 @@ function ToolkitSelection(selection){
 				e.reversed().iter(function(g){
 					g.remove();
 					self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-					tk.config.callbacks.preInsert(g);
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(g);
+					});
 				});
 				e.backChain = this;
 				return e;
 			case 2:
-				self.set[0].insertBefore(e, this.set[0].firstChild);
-				tk.config.callbacks.preInsert(e);
-				return new ToolkitSelection(e, this);
+				self.set[0].insertBefore(e, self.set[0].firstChild);
+				var selection = new ToolkitSelection(e, this);
+				tk.iter(tk.inspectionFunctions, function(f){
+					f(selection);
+				});
+				return selection;
 		}
 	}
 

@@ -20,6 +20,13 @@ function createToolkit(){
 	})
 
 	tk.initFunctions = [];
+	tk.inspectionFunctions = [];
+	function initCall(){
+		tk.iter(tk.initFunctions, tk.fn.call);
+		tk.iter(tk.inspectionFunctions, function(f){
+			f(tk('html'));
+		});
+	}
 
 	/* ---- Function definitions ---- */
 	tk.fn = {
@@ -39,14 +46,9 @@ function createToolkit(){
 	}
 
 	/* ---- Default configuration ---- */
-	//	TODO: Allow override.
 	tk.config = {
 		debug: false,
-		documentRoot: document,
-		callbacks: {
-			preInsert: tk.fn.eatCall,
-			preRequest: tk.fn.eatCall
-		}
+		documentRoot: document
 	}
 
 	function applyOverride(src, dest){
@@ -280,15 +282,8 @@ function createToolkit(){
 		tk.initFunctions.push(initFunction);
 	}
 
-	if (/complete|loaded|interactive/.test(document.readyState)){
-		tk.iter(tk.initFunctions, tk.fn.call);
-	}
-	else {
-		if (window){
-			window.addEventListener('DOMContentLoaded', function(){
-				tk.iter(tk.initFunctions, tk.fn.call);
-			});
-		}
+	tk.inspection = function(inspectFunction){
+		tk.inspectionFunctions.push(inspectFunction);
 	}
 
 	/* ---- Delay ---- */
@@ -305,6 +300,15 @@ function createToolkit(){
 
 	/* ---- Binding ---- */
 	/* ::insertsource binding.js */
+
+	if (/complete|loaded|interactive/.test(document.readyState)){
+		initCall();
+	}
+	else {
+		if (window){
+			window.addEventListener('DOMContentLoaded', initCall);
+		}
+	}
 
 	return tk;
 }

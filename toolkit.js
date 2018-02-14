@@ -26,6 +26,13 @@ function createToolkit(){
 	})
 
 	tk.initFunctions = [];
+	tk.inspectionFunctions = [];
+	function initCall(){
+		tk.iter(tk.initFunctions, tk.fn.call);
+		tk.iter(tk.inspectionFunctions, function(f){
+			f(tk('html'));
+		});
+	}
 
 	/* ---- Function definitions ---- */
 	tk.fn = {
@@ -45,14 +52,9 @@ function createToolkit(){
 	}
 
 	/* ---- Default configuration ---- */
-	//	TODO: Allow override.
 	tk.config = {
 		debug: false,
-		documentRoot: document,
-		callbacks: {
-			preInsert: tk.fn.eatCall,
-			preRequest: tk.fn.eatCall
-		}
+		documentRoot: document
 	}
 
 	function applyOverride(src, dest){
@@ -286,15 +288,8 @@ function createToolkit(){
 		tk.initFunctions.push(initFunction);
 	}
 
-	if (/complete|loaded|interactive/.test(document.readyState)){
-		tk.iter(tk.initFunctions, tk.fn.call);
-	}
-	else {
-		if (window){
-			window.addEventListener('DOMContentLoaded', function(){
-				tk.iter(tk.initFunctions, tk.fn.call);
-			});
-		}
+	tk.inspection = function(inspectFunction){
+		tk.inspectionFunctions.push(inspectFunction);
 	}
 
 	/* ---- Delay ---- */
@@ -362,6 +357,36 @@ function createToolkit(){
 
 	/* ---- Shorthand notation ---- */
 	tk.snap = function(shorthand, rootElement){
+		var oArguments = [].slice.call(arguments);
+		oArguments.splice(0, 2);
+	
+		var timeoutMatcher = /\.\.\.\(([0-9]+)\)/;
+		if (timeoutMatcher.test(shorthand)){
+			//	Includes sleeps.
+			var steps = shorthand.split(timeoutMatcher),
+				isTimeout = false,
+				timeout = 0,
+				returnValue;
+			tk.iter(steps, function(step, i){
+				if (isTimeout){
+					timeout += step;
+				}
+				else {
+					if (timeout > 0){
+						tk.timeout(function(){
+							tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
+						}, timeout);
+					}
+					else {
+						returnValue = tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
+					}
+				}
+	
+				isTimeout = !isTimeout;
+			});
+	
+			return returnValue;
+		}
 	
 		//	Collect variables.
 		var variables = {
@@ -369,7 +394,7 @@ function createToolkit(){
 		};
 		for (var i = 2; i < arguments.length; i++){
 			var arg = arguments[i];
-			if (typeof arg == 'object'){
+			if (typeof arg == 'object' && arg !== null){
 				for (var name in arg){
 					variables['$' + name] = arg[name];
 				}
@@ -380,14 +405,32 @@ function createToolkit(){
 		}
 	
 		function resolveVariable(variable){
+			var expression;
+	
 			//	Resolve values.
 			if (variable.length == 0){
 				variable = '$0';
 			}
+			else if (expression = /([a-z]+)\((.*?)\)/.exec(variable)){
+				//	Function call.
+				switch(expression[1]){
+					case 'null':
+						variable = resolveVariable(expression[2]) === null;
+						break;
+					case 'notnull':
+						variable = resolveVariable(expression[2]) !== null;
+						break;
+					default:
+						throw 'No such function: ' + expression[1];
+				}
+			}
 			
 			if (variable[0] == '$'){
-				return variables[variable];
+				variable = variables[variable];
 			}
+	
+			if (variable == 'true'){ return true; }
+			else if (variable == 'false'){ return false; }
 			return variable;
 		}
 	
@@ -401,8 +444,16 @@ function createToolkit(){
 			else {
 				//	Check special cases.
 				var expression;
-				if (expression = /^css\(([$\w\-]+)((?:\s[$\w\-]+)|)\)$/.exec(left)){
+				if (expression = /^css\(([\w\-]+)((?:\s[$\w\-]+)|)\)$/.exec(left)){
 					element.css(expression[1], resolveVariable(expression[2].trim()));
+				}
+				else if (expression = /^class\(([$\w\-]+)((?:\s[$()\w\-]+)|)((?:\s[0-9]+)|)\)$/.exec(left)){
+					var time = expression[3].length == 0 ? -1 : parseInt(expression[3].trim());
+					element.classify(
+						resolveVariable(expression[1]),
+						resolveVariable(expression[2].trim()),
+						time
+					);
 				}
 				else {
 					switch (left){
@@ -428,7 +479,10 @@ function createToolkit(){
 				created.attr('id', idMod.substring(1))
 			}
 			if (classMod.length > 0){
-				created.classify(classMod.substring(1));
+				var classes = classMod.split('.');
+				for (var i = 1; i < classes.length; i++){
+					created.classify(classes[i]);
+				}
 			}
 			return created;
 		}
@@ -436,13 +490,14 @@ function createToolkit(){
 		shorthand += '&';
 		var depthFinder = /(.*?)([>&])/g,
 			element = rootElement,
-			depth;
+			depth,
+			last = element;
 		while (depth = depthFinder.exec(shorthand)){
 			var siblingMode = depth[2].length > 0 && depth[2] == '&',
 				item = depth[1];
 	
 			//	Parse.
-			var match = /^([+\-]|)(\*|)([$a-z0-9]+)((?:\([$a-z0-9]+\))|)((?:#\w+)|)((?:\.\w+)|)((?:\:{1,2}[$\w\s\-()]+(?:=[$\w\s.]+){0,1})+|)$/.exec(item),
+			var match = /^([+\-]|)(\*|)([$a-z0-9]+)((?:\([$a-z0-9]+\))|)((?:#\w+)|)((?:\.[\w\-]+)+|)((?:\:{1,2}[$\w\s\-()]+(?:=[$\w\s.]+){0,1})+|)$/.exec(item),
 				resolve = function(){ return element; };
 	
 			if (match == null){
@@ -527,11 +582,12 @@ function createToolkit(){
 	
 			resolve();
 			if (siblingMode && element.backChain){
+				last = element;
 				element = element.back();
 			}
 		}
 	
-		return element;
+		return last;
 	}
 
 	/* ---- Selection ---- */
@@ -600,6 +656,10 @@ function createToolkit(){
 				return new ToolkitSelection(this.set[i], this);
 			}
 			return this.set[i];
+		}
+	
+		this.first = function(){
+			return this.ith(0);
 		}
 	
 		this.reversed = function(){
@@ -1185,7 +1245,10 @@ function createToolkit(){
 					});
 					//	Insert.
 					tk.iter(set, function(e){
-						tk.config.callbacks.preInsert(new ToolkitSelection(e));
+						var selection = new ToolkitSelection(e, this);
+						tk.iter(tk.inspectionFunctions, function(f){
+							f(selection);
+						});
 						self.set[0].appendChild(e);
 					});
 					return new ToolkitSelection(set, this);
@@ -1193,7 +1256,9 @@ function createToolkit(){
 					arg.iter(function(g){
 						g.remove();
 						self.set[0].appendChild(g.set[0]);
-						tk.config.callbacks.preInsert(g);
+						tk.iter(tk.inspectionFunctions, function(f){
+							f(g);
+						});
 					});
 					arg.backChain = this;
 					return arg;
@@ -1201,8 +1266,11 @@ function createToolkit(){
 					arg = document.createElement(arg);
 				case 3:
 					self.set[0].appendChild(arg);
-					tk.config.callbacks.preInsert(arg);
-					return new ToolkitSelection(arg, this);
+					var selection = new ToolkitSelection(arg, this)
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(selection);
+					});
+					return selection;
 			}
 		}
 	
@@ -1232,7 +1300,10 @@ function createToolkit(){
 					});
 					//	Insert.
 					tk.iter(set, function(e){
-						tk.config.callbacks.preInsert(new ToolkitSelection(e));
+						var selection = new ToolkitSelection(e, this);
+						tk.iter(tk.inspectionFunctions, function(f){
+							f(selection);
+						});
 						self.set[0].insertBefore(e, self.set[0].firstChild);
 					});
 					return new ToolkitSelection(set, this);
@@ -1240,14 +1311,19 @@ function createToolkit(){
 					e.reversed().iter(function(g){
 						g.remove();
 						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-						tk.config.callbacks.preInsert(g);
+						tk.iter(tk.inspectionFunctions, function(f){
+							f(g);
+						});
 					});
 					e.backChain = this;
 					return e;
 				case 2:
-					self.set[0].insertBefore(e, this.set[0].firstChild);
-					tk.config.callbacks.preInsert(e);
-					return new ToolkitSelection(e, this);
+					self.set[0].insertBefore(e, self.set[0].firstChild);
+					var selection = new ToolkitSelection(e, this);
+					tk.iter(tk.inspectionFunctions, function(f){
+						f(selection);
+					});
+					return selection;
 			}
 		}
 	
@@ -1406,16 +1482,21 @@ function createToolkit(){
 	}
 
 	/* ---- Requests ---- */
+	tk.requestProcessors = [];
+	
 	function Request(method, url){
+		var self = this;
 		this.fns = {
 			success: tk.fn.eatCall,
 			failure: tk.fn.eatCall
 		};
-		this.url = url;
-		this.method = method;
-		this.query = {};
-		this.body = null;
-		this.mimetype = 'text/plain';
+		this.storage = {
+			url: url,
+			method: method,
+			query: {},
+			headers: {},
+			body: null
+		}
 	
 		this.success = function(success){
 			/*
@@ -1438,8 +1519,25 @@ function createToolkit(){
 				Provide an object to serialize as JSON for the body of this 
 				request.
 			*/
-			this.mimetype = 'application/json';
-			this.body = object;
+			this.storage.headers['Content-Type'] = 'application/json';
+			this.storage.body = tk.unbound(object);
+			return this;
+		}
+	
+		this.text = function(object){
+			/*
+				Provide a text body.
+			*/
+			this.storage.headers['Content-Type'] = tk.varg(arguments, 1, 'text/plain');
+			this.storage.body = object;
+			return this;
+		}
+	
+		this.header = function(key, value){
+			/*
+				Provide a header.
+			*/
+			this.storage.headers[key] = value;
 			return this;
 		}
 	
@@ -1447,7 +1545,7 @@ function createToolkit(){
 			/*
 				Set the key, value mapping for the query string.
 			*/
-			this.query = map;
+			this.storage.query = map;
 			return this;
 		}
 	
@@ -1456,19 +1554,15 @@ function createToolkit(){
 			//	Parse response.
 			var contentType = xhr.getResponseHeader('Content-Type'),
 				status = xhr.status,
-				responseData = null;
+				responseData = xhr.responseText;;
 			switch (contentType){
-				case 'text/plain':
-					break;
 				case 'application/json':
 					responseData = JSON.parse(xhr.responseText)
-					break;
-				default:
-					throw 'Unknown response content type (' + contentType + ')';
+					break;				
 			}
 	
 			//	Log.
-			tk.log('Received ' + status + ' (' + this.method + ', ' + this.url + '):', responseData);
+			tk.log('Received ' + status + ' (' + this.storage.method + ', ' + this.storage.url + '):', responseData);
 	
 			//	Dispatch appropriate callback.
 			var callback = status < 400 ? this.fns.success : this.fns.failure;
@@ -1478,51 +1572,59 @@ function createToolkit(){
 		this.send = function(object){
 			var xhr = new XMLHttpRequest();
 	
-			tk.config.callbacks.preRequest(this, xhr);
+			tk.iter(tk.requestProcessors, function(f){
+				f(self);
+			});
 	
 			//	Create query string.
-			var fullURL = this.url;
+			var fullURL = this.storage.url;
 			var queryItems = [];
-			tk.iter(this.query, function(k, v){
+			tk.iter(this.storage.query, function(k, v){
 				queryItems.push(k + '=' + encodeURIComponent(v));
 			});
 			if (queryItems.length > 0){
 				fullURL += '?' + queryItems.join('&');
 			}
 	
-			var self = this;
 			xhr.onreadystatechange = function(){
-				self._processResponse(this);
+				if (this.readyState == 4){
+					self._processResponse(this);
+				}
 			}
 	
 			var processedBody = '';
-			if (this.body != null){
+			if (this.storage.body != null){
 				//	Process body.
 				//	TODO: More;
-				switch (this.mimetype){
+				var mimetype = this.storage.headers['Content-Type'];
+				switch (mimetype){
 					case 'text/plain':
 						break;
 					case 'application/json':
-						processedBody = JSON.stringify(this.body);
+						processedBody = JSON.stringify(this.storage.body);
 						break;
 					default:
-						throw 'Unknown request content type (' + this.mimetype + ')';
+						throw 'Unknown request content type (' + mimetype + ')';
 				}
-	
-				xhr.setRequestHeader('Content-Type', this.mimetype);
 			}
 	
-			xhr.open(this.method, fullURL, true);
+			xhr.open(this.storage.method, fullURL, true);
+			tk.iter(this.storage.headers, function(k, v){
+				xhr.setRequestHeader(k, v);
+			});
+	
 			xhr.send(processedBody);
 	
-			tk.log('Sent (' + method + ': ' + url + ')', this.body);
+			tk.log('Sent (' + method + ': ' + url + ')', this.storage.body);
 		}
 	}
 	
 	tk.request = function(method, url){
 		return new Request(method, url);
 	}
-	
+	tk.request.processor = function(callback){
+		tk.requestProcessors.push(callback);
+	}
 
 	/* ---- Binding ---- */
 	function ElementPropertyBinding(parent, element){
@@ -1898,6 +2000,15 @@ function createToolkit(){
 		}
 	}
 	
+
+	if (/complete|loaded|interactive/.test(document.readyState)){
+		initCall();
+	}
+	else {
+		if (window){
+			window.addEventListener('DOMContentLoaded', initCall);
+		}
+	}
 
 	return tk;
 }
