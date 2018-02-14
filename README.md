@@ -2,8 +2,7 @@
 
 toolkit.js is a Javascript helper library which aims to reduce boilerplate
 and improve code maintainability. It features DOM manipulation utilities,
-an AJAX interface, and live data to DOM binding, and is well suited projects
-both simple and complex.
+an AJAX interface, and live data to DOM binding.
 
 ## What's it like?
 The following code sample is a demonstration of two of toolkit's most powerful
