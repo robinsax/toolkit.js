@@ -358,6 +358,9 @@ tk.unbound = function(arg){
 		case 0:
 			return tk.comprehension(arg, tk.unbound);
 		case 1:
+			if (arg === null){
+				return null;
+			}
 			var copy = {};
 			tk.iter(arg, function(key, value){
 				if (key.startsWith('__')){

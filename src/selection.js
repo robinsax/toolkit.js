@@ -33,6 +33,7 @@ function ToolkitSelection(selection){
 				return tk.config.documentRoot.querySelectorAll(selection);
 		}
 	})();
+	this.set = [].slice.call(this.set);
 	//	Define the cardinality of the selection.
 	this.length = this.set.length;
 	this.empty = this.length == 0;
@@ -98,8 +99,7 @@ function ToolkitSelection(selection){
 				newSet = this.comprehension(reducer);
 		}
 		
-		return new ToolkitSelection(function(){
-		}, this);
+		return new ToolkitSelection(newSet, this);
 	}
 
 	this.extend = function(extension){
@@ -363,7 +363,11 @@ function ToolkitSelection(selection){
 			if (this.set[0].type == 'checkbox'){
 				return this.set[0].checked;
 			}
-			return this.set[0].value;
+			var val = this.set[0].value;
+			if (val === undefined || val.length == 0){
+				return null;
+			}
+			return val;
 		}
 	}
 

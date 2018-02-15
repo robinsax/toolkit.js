@@ -20,11 +20,15 @@ function createToolkit(){
 	})
 
 	tk.initFunctions = [];
-	tk.inspectionFunctions = [];
 	function initCall(){
 		tk.iter(tk.initFunctions, tk.fn.call);
+		inspectCall(tk('html'));
+	}
+	tk.inspectionFunctions = [];
+	function inspectCall(root){
+		var check = root.extend(root.children());
 		tk.iter(tk.inspectionFunctions, function(f){
-			f(tk('html'));
+			f(check);
 		});
 	}
 

@@ -26,11 +26,15 @@ function createToolkit(){
 	})
 
 	tk.initFunctions = [];
-	tk.inspectionFunctions = [];
 	function initCall(){
 		tk.iter(tk.initFunctions, tk.fn.call);
+		inspectCall(tk('html'));
+	}
+	tk.inspectionFunctions = [];
+	function inspectCall(root){
+		var check = root.extend(root.children());
 		tk.iter(tk.inspectionFunctions, function(f){
-			f(tk('html'));
+			f(check);
 		});
 	}
 
@@ -686,6 +690,7 @@ function createToolkit(){
 					return tk.config.documentRoot.querySelectorAll(selection);
 			}
 		})();
+		this.set = [].slice.call(this.set);
 		//	Define the cardinality of the selection.
 		this.length = this.set.length;
 		this.empty = this.length == 0;
@@ -751,8 +756,7 @@ function createToolkit(){
 					newSet = this.comprehension(reducer);
 			}
 			
-			return new ToolkitSelection(function(){
-			}, this);
+			return new ToolkitSelection(newSet, this);
 		}
 	
 		this.extend = function(extension){
@@ -1016,7 +1020,11 @@ function createToolkit(){
 				if (this.set[0].type == 'checkbox'){
 					return this.set[0].checked;
 				}
-				return this.set[0].value;
+				var val = this.set[0].value;
+				if (val === undefined || val.length == 0){
+					return null;
+				}
+				return val;
 			}
 		}
 	
@@ -2047,6 +2055,9 @@ function createToolkit(){
 			case 0:
 				return tk.comprehension(arg, tk.unbound);
 			case 1:
+				if (arg === null){
+					return null;
+				}
 				var copy = {};
 				tk.iter(arg, function(key, value){
 					if (key.startsWith('__')){
