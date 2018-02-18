@@ -40,8 +40,9 @@ function ElementPropertyBinding(parent, element){
 	}
 
 	this.begin = function(){
-		parent.changed(this._applyChange);
-		return this.parent.begin();
+		this.parent.changed(this._applyChange);
+		this.parent.begin();
+		return this.element;
 	}
 }
 
@@ -111,7 +112,7 @@ function PropertyBinding(host, property){
 		//	Apply initial.
 		this._processChange(this.host[property]);
 
-		return this;
+		return this.element;
 	}
 }
 
@@ -190,7 +191,8 @@ function ElementArrayBinding(parent, element){
 		parent.changed(this._applyChanged);
 		parent.removed(this._applyRemove);
 		parent.added(this._applyAdd);
-		return this.parent.begin();
+		this.parent.begin();
+		return this.element;
 	}
 }
 

@@ -572,7 +572,7 @@ function ToolkitSelection(selection){
 			var selector = '.' + cls;
 			if (flag == 'toggle'){
 				//	Special second parameter case.
-				f = function(e, i){
+				flag = function(e, i){
 					return !e.is(selector);
 				}
 			}

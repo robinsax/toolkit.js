@@ -1229,7 +1229,7 @@ function createToolkit(){
 				var selector = '.' + cls;
 				if (flag == 'toggle'){
 					//	Special second parameter case.
-					f = function(e, i){
+					flag = function(e, i){
 						return !e.is(selector);
 					}
 				}
@@ -1737,8 +1737,9 @@ function createToolkit(){
 		}
 	
 		this.begin = function(){
-			parent.changed(this._applyChange);
-			return this.parent.begin();
+			this.parent.changed(this._applyChange);
+			this.parent.begin();
+			return this.element;
 		}
 	}
 	
@@ -1808,7 +1809,7 @@ function createToolkit(){
 			//	Apply initial.
 			this._processChange(this.host[property]);
 	
-			return this;
+			return this.element;
 		}
 	}
 	
@@ -1887,7 +1888,8 @@ function createToolkit(){
 			parent.changed(this._applyChanged);
 			parent.removed(this._applyRemove);
 			parent.added(this._applyAdd);
-			return this.parent.begin();
+			this.parent.begin();
+			return this.element;
 		}
 	}
 	
