@@ -1023,6 +1023,9 @@ function createToolkit(){
 				if (val === undefined || val.length == 0){
 					return null;
 				}
+				if (this.set[0].getAttribute('type') == 'number'){
+					return +val;
+				}
 				return val;
 			}
 		}
