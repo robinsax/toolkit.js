@@ -132,7 +132,6 @@ function createToolkit(){
 		*/
 		var args = [].slice.call(arguments);
 		args.splice(0, 2);
-		args = [object].concat(args);
 		cls.apply(object, args);
 	}
 
