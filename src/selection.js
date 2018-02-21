@@ -355,8 +355,15 @@ function ToolkitSelection(selection){
 		if (arguments.length > 0){
 			var value = arguments[0];
 			this.iter(function(e){
-				e.value = value;
-			}, false);
+				if (e.tag().toLowerCase() == 'select'){
+					e.children('option').attr('selected', function(g){
+						return g.attr('value') == value;
+					});
+				}
+				else {
+					e.ith(0, false).value = value;
+				}
+			});
 			return this;
 		}
 		else {
@@ -407,7 +414,7 @@ function ToolkitSelection(selection){
 							break;
 						default:
 							this.iter(function(e, i){
-								e.setAttribute(name, tk.resolve(value, e, i));
+								e.setAttribute(name, tk.resolve(value, new ToolkitSelection(e), i));
 							}, false);
 					}
 				}
