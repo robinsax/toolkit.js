@@ -47,6 +47,7 @@ function createToolkit(){
 		resign: function(a){ return -a; },
 		negation: function(a){ return !a; },
 		call: function(a){ return a(); },
+		notImplemented: function(){ throw 'Not implemented!'; },
 		cleanWhitespace: function(a){
 			return a.replace(/\s+/g, ' ').trim();
 		},
