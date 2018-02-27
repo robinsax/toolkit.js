@@ -1015,12 +1015,12 @@ function createToolkit(){
 					if (e.tag().toLowerCase() == 'select'){
 						if (value === null){
 							e.children('option').attr('selected', function(g){
-								return g.is(':not([value])');
+								return g.is(':not([value])') ? true : null;
 							});
 						}
 						else {
 							e.children('option').attr('selected', function(g){
-								return g.attr('value') == value;
+								return g.attr('value') == value ? true : null;
 							});
 						}
 					}
