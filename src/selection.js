@@ -356,9 +356,16 @@ function ToolkitSelection(selection){
 			var value = arguments[0];
 			this.iter(function(e){
 				if (e.tag().toLowerCase() == 'select'){
-					e.children('option').attr('selected', function(g){
-						return g.attr('value') == value;
-					});
+					if (value === null){
+						e.children('option').attr('selected', function(g){
+							return g.is(':not([value])');
+						});
+					}
+					else {
+						e.children('option').attr('selected', function(g){
+							return g.attr('value') == value;
+						});
+					}
 				}
 				else {
 					e.ith(0, false).value = value;
