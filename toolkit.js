@@ -1014,7 +1014,7 @@ function createToolkit(){
 				this.iter(function(e){
 					if (e.tag().toLowerCase() == 'select'){
 						e.children('option').attr('selected', function(g){
-							return g.attr('value') == value;
+							return g.attr('value') == value ? true : null;
 						});
 					}
 					else {
@@ -1071,7 +1071,13 @@ function createToolkit(){
 								break;
 							default:
 								this.iter(function(e, i){
-									e.setAttribute(name, tk.resolve(value, new ToolkitSelection(e), i));
+									var x = tk.resolve(value, new ToolkitSelection(e), i);
+									if (x === null){
+										e.removeAttribute(name);
+									}
+									else {
+										e.setAttribute(name, x);
+									}
 								}, false);
 						}
 					}
