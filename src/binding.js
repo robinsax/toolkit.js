@@ -56,7 +56,7 @@ function PropertyBinding(host, property){
 	};
 
 	this._processChange = function(newValue){
-		self.fns.callback(newValue);
+		return self.fns.callback(newValue);
 	}
 
 	this._createListener = function(bindings, initialValue){
@@ -67,7 +67,10 @@ function PropertyBinding(host, property){
 			},
 			set: function(newValue){
 				tk.iter(bindings, function(b){
-					b(newValue);
+					var x = b(newValue);
+					if (x !== undefined){
+						newValue = x;
+					}
 				});
 				value = newValue;
 			}
@@ -213,8 +216,8 @@ function ArrayBinding(ary){
 				return value;
 			},
 			set: function(newValue){
-				self.fns.changed(newValue, index);
-				value = newValue;
+				var override = self.fns.changed(newValue, index);
+				value = real === undefined ? newValue : override;
 			},
 			configurable: true
 		};

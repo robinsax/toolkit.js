@@ -1013,16 +1013,9 @@ function createToolkit(){
 				var value = arguments[0];
 				this.iter(function(e){
 					if (e.tag().toLowerCase() == 'select'){
-						if (value === null){
-							e.children('option').attr('selected', function(g){
-								return g.is(':not([value])') ? true : null;
-							});
-						}
-						else {
-							e.children('option').attr('selected', function(g){
-								return g.attr('value') == value ? true : null;
-							});
-						}
+						e.children('option').attr('selected', function(g){
+							return g.attr('value') == value;
+						});
 					}
 					else {
 						e.ith(0, false).value = value;
@@ -1078,13 +1071,7 @@ function createToolkit(){
 								break;
 							default:
 								this.iter(function(e, i){
-									var val = tk.resolve(value, new ToolkitSelection(e), i);
-									if (val == null){
-										e.removeAttribute(name, null);
-									}
-									else {
-										e.setAttribute(name, val);
-									}
+									e.setAttribute(name, tk.resolve(value, new ToolkitSelection(e), i));
 								}, false);
 						}
 					}
@@ -1776,7 +1763,7 @@ function createToolkit(){
 		};
 	
 		this._processChange = function(newValue){
-			self.fns.callback(newValue);
+			return self.fns.callback(newValue);
 		}
 	
 		this._createListener = function(bindings, initialValue){
@@ -1787,7 +1774,10 @@ function createToolkit(){
 				},
 				set: function(newValue){
 					tk.iter(bindings, function(b){
-						b(newValue);
+						var x = b(newValue);
+						if (x !== undefined){
+							newValue = x;
+						}
 					});
 					value = newValue;
 				}
@@ -1933,8 +1923,8 @@ function createToolkit(){
 					return value;
 				},
 				set: function(newValue){
-					self.fns.changed(newValue, index);
-					value = newValue;
+					var override = self.fns.changed(newValue, index);
+					value = real === undefined ? newValue : override;
 				},
 				configurable: true
 			};
