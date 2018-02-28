@@ -1078,7 +1078,13 @@ function createToolkit(){
 								break;
 							default:
 								this.iter(function(e, i){
-									e.setAttribute(name, tk.resolve(value, new ToolkitSelection(e), i));
+									var val = tk.resolve(value, new ToolkitSelection(e), i);
+									if (val == null){
+										e.removeAttribute(name, null);
+									}
+									else {
+										e.setAttribute(name, val);
+									}
 								}, false);
 						}
 					}
