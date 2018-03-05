@@ -1,4 +1,9 @@
 tk.snap = function(shorthand, rootElement){
+	if (rootElement === undefined){
+		//	HOTFIX for behaviour improvement
+		return tk.snap(shorthand, tk('body'));
+	}
+
 	//	Process timeouts.
 	var oArguments = [].slice.call(arguments);
 	oArguments.splice(0, 2);

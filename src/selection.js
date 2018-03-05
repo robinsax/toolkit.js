@@ -67,7 +67,7 @@ function ToolkitSelection(selection){
 	}
 
 	this.first = function(){
-		return this.ith(0);
+		return this.ith(0, arguments.length > 0 && !arguments[0]);
 	}
 
 	this.reversed = function(){

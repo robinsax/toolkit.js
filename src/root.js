@@ -138,6 +138,7 @@ function createToolkit(){
 		var name = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 		return name ? name[1] : '<anonymous function>';
 	}
+	tk.fname = tk.functionName;
 
 	tk.typeCheck = function(object){
 		/*

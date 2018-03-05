@@ -144,6 +144,7 @@ function createToolkit(){
 		var name = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 		return name ? name[1] : '<anonymous function>';
 	}
+	tk.fname = tk.functionName;
 
 	tk.typeCheck = function(object){
 		/*
@@ -361,6 +362,11 @@ function createToolkit(){
 
 	/* ---- Shorthand notation ---- */
 	tk.snap = function(shorthand, rootElement){
+		if (rootElement === undefined){
+			//	HOTFIX for behaviour improvement
+			return tk.snap(shorthand, tk('body'));
+		}
+	
 		//	Process timeouts.
 		var oArguments = [].slice.call(arguments);
 		oArguments.splice(0, 2);
@@ -724,7 +730,7 @@ function createToolkit(){
 		}
 	
 		this.first = function(){
-			return this.ith(0);
+			return this.ith(0, arguments.length > 0 && !arguments[0]);
 		}
 	
 		this.reversed = function(){
