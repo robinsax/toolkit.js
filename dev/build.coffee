@@ -1,5 +1,5 @@
 fs = require 'fs'
-http = require 'http'
+ugly = require 'uglify-js'
 coffee = require 'coffeescript'
 babel = require 'babel-core'
 
@@ -13,13 +13,16 @@ compileWithIncludes = (filename) ->
 		presets: ['es2015']
 	compiled = coffee.compile contents
 	result = babel.transform compiled, transpileOpts
-	result.code
+	(ugly.minify result.code).code
 
-fs.writeFileSync 'toolkit.js', compileWithIncludes 'toolkit'
+header = '''/*
+	toolkit.js
+
+	Author: Robin Saxifrage
+	License: Apache 2.0
+*/
+
+'''
+
+fs.writeFileSync 'toolkit.min.js', header + compileWithIncludes 'toolkit'
 console.log 'Compiled'
-
-minifyOpts =
-	host: 'https://javascript-minifier.com'
-	path: '/raw'
-	method: 'POST'
-#	TODO: Minify req.
