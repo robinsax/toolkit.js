@@ -1,3 +1,5 @@
+_sentinel = {}
+
 callable = (Class) ->
 	() ->
 		#	Create an instance.
