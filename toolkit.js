@@ -1,2112 +1,1584 @@
-/*
-	toolkit.js
-
-	Author: Robin Saxifrage
-	License: Apache 2.0
-*/
 'use strict';
-function createToolkit(){
-	/*
-		Create an instance of the toolkit library. Canonically, this is 
-		assigned to a variable named `tk`.
-	*/
 
-	//	A sentinel value used internally.
-	var _sentinel = new Object();
-	
-	var tk = function(selection){
-		return new ToolkitSelection(selection);
-	}
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-	Object.defineProperty(tk, 'here', {
-		get: function(){
-			tk.log('here');
-			return 'here';
-		}
-	})
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	tk.initFunctions = [];
-	function initCall(){
-		tk.iter(tk.initFunctions, tk.fn.call);
-		inspectCall(tk('html'));
-	}
-	tk.inspectionFunctions = [];
-	function inspectCall(root){
-		var check = root.extend(root.children());
-		tk.iter(tk.inspectionFunctions, function(f){
-			f(check);
-		});
-	}
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	/* ---- Function definitions ---- */
-	tk.fn = {
-		eatCall: function(){},
-		identity: function(a){ return a; },
-		contradiction: function(){ return false; },
-		tautology: function(){ return true; },
-		resign: function(a){ return -a; },
-		negation: function(a){ return !a; },
-		call: function(a){ return a(); },
-		notImplemented: function(){ throw 'Not implemented!'; },
-		cleanWhitespace: function(a){
-			return a.replace(/\s+/g, ' ').trim();
-		},
-		removeWhitespace: function(a){
-			return a.replace(/\s+/, '');
-		}
-	}
+(function () {
+  var Request,
+      Toolkit,
+      ToolkitAListener,
+      ToolkitGuts,
+      ToolkitPListener,
+      ToolkitSelection,
+      ToolkitTemplate,
+      _Listeners,
+      _RequestModule,
+      _SelectionModule,
+      _Templates,
+      _Toolkit,
+      _sentinel,
+      callable,
+      guts,
+      toolkit,
+      indexOf = [].indexOf;
 
-	/* ---- Default configuration ---- */
-	tk.config = {
-		debug: false,
-		documentRoot: document
-	}
+  _sentinel = {};
 
-	function applyOverride(src, dest){
-		for (var key in src){
-			if (typeof dest[key] == 'object'){
-				applyOverride(src[key], dest[key]);
-			}
-			else if (src[key] !== undefined) {
-				dest[key] = src[key];
-			}
-		}
-	}
+  callable = function callable(Class) {
+    return function () {
+      var func, inst, j, len, name, names, obj;
+      //	Create an instance.
+      inst = new Class();
+      //	Create a function that invokes _call()
+      func = function func() {
+        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+          args[_key] = arguments[_key];
+        }
 
-	if (arguments.length > 0){
-		applyOverride(arguments[0], tk.config);
-	}
+        return inst._call.apply(this, args);
+      };
 
+      //	Copy the properties of the instance onto the function.
+      obj = inst;
+      while (true) {
+        names = Object.getOwnPropertyNames(obj);
+        for (j = 0, len = names.length; j < len; j++) {
+          name = names[j];
+          if (typeof obj[name] === 'function') {
+            func[name] = obj[name];
+          } else {
+            Object.defineProperty(func, name, Object.getOwnPropertyDescriptor(obj, name));
+          }
+        }
+        if (!(obj = Object.getPrototypeOf(obj))) {
+          break;
+        }
+      }
 
-	/* ---- Core utility functions ---- */
-	tk.varg = function(args, i, defaultValue){
-		/*
-			Return the `i`th member of `args`, or `defaultValue` if there are 
-			fewer than `i` arguments.
-		*/
-		return args.length > i ? args[i] : defaultValue;
-	}
-	tk.varg.on = function(args){
-		/*
-			Return a function that is equivalent to `tk.varg`, except that 
-			the first parameter can be omitted and is invariantly `args`.
-		*/
-		return function(i, defaultValue){
-			return tk.varg(args, i, defaultValue);
-		}
-	}
+      //	Return the function.
+      return func;
+    };
+  };
 
-	tk.prop = function(object, property){
-		/*
-			::argspec -
-			Return whether `object` has a property named the value of 
-			`property`.
+  //	The protected internals of the base Toolkit instance. Nothing within this
+  //	object should be considered exposed.
+  ToolkitGuts = function () {
+    function ToolkitGuts() {
+      _classCallCheck(this, ToolkitGuts);
 
-			::argspec -, defaultValue
-			Return the value of the property of `object` named `property`, or 
-			`defaultValue` if it doesn't exist.
-		*/
-		var defaultValue = tk.varg(arguments, 2, _sentinel),
-			hasProperty = object.hasOwnProperty(property);
-		if (defaultValue === _sentinel){
-			return hasProperty;
-		}
-		return hasProperty ? object[property] : defaultValue;
-	}
-	tk.prop.on = function(object){
-		/*
-			Return a function that is equivalent to `tk.prop`, except that 
-			the first parameter can be omitted and is invariantly `object`.
-		*/
-		return function(property){
-			tk.prop.apply(this, [
-				object, 
-				property, 
-				tk.varg(arguments, 1, _sentinel)
-			]);
-		}
-	}
+      this.initFunctions = [];
+      this.inspectionFunctions = [];
+      this.modules = [];
+      return;
+    }
 
-	tk.extends = function(object, cls){
-		/*
-			Make `object` a proper subclass of `cls`.
-		*/
-		var args = [].slice.call(arguments);
-		args.splice(0, 2);
-		cls.apply(object, args);
-	}
+    _createClass(ToolkitGuts, [{
+      key: 'attach',
+      value: function attach(Module) {
+        this.modules.push(Module);
+        return this;
+      }
+    }, {
+      key: 'onto',
+      value: function onto(tk) {
+        var Module, inst, j, len, ref;
+        ref = this.modules;
+        for (j = 0, len = ref.length; j < len; j++) {
+          Module = ref[j];
+          inst = new Module(tk);
+          if (inst.called) {
+            tk[inst.called] = inst;
+          }
+        }
+        return this;
+      }
+    }, {
+      key: 'init',
+      value: function init() {
+        var f, j, len, ref;
+        ref = this.initFunctions;
+        for (j = 0, len = ref.length; j < len; j++) {
+          f = ref[j];
+          f();
+        }
+        return this;
+      }
+    }, {
+      key: 'inspect',
+      value: function inspect(check) {
+        var f, j, len, ref;
+        ref = this.inspectionFunctions;
+        for (j = 0, len = ref.length; j < len; j++) {
+          f = ref[j];
+          f(check);
+        }
+        return this;
+      }
+    }]);
 
-	tk.functionName = function(func){
-		/*
-			Return the name of `func` or `'<anonymous function>'` if the 
-			function has no name.
-		*/
-		var name = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
-		return name ? name[1] : '<anonymous function>';
-	}
-	tk.fname = tk.functionName;
+    return ToolkitGuts;
+  }();
 
-	tk.typeCheck = function(object){
-		/*
-			::argspec -, type0, ..., typeN
-			Return the index of the type of `object` in the list of types 
-			supplied beyond the first positional argument, or throw an 
-			exception if `object` is none of those types.
-		*/
-		for (var i = 1; i < arguments.length; i++){
-			var check = arguments[i];
-			if (check === null) {
-				//	Null check.
-				if (object === null){
-					return i - 1;
-				}
-			}
-			else if (typeof object == check){
-				//	Typeof check.
-				return i - 1;
-			}
-			else {
-				//	Class check.
-				try {
-					if (object instanceof check){
-						return i - 1;
-					}
-				}
-				catch (e){}
-			}
-			if (check == 'any'){
-				return i - 1;
-			}
-		}
-		//	No match found, create and throw a formatted error.
-		var expected = [];
-		for (var i = 1; i < arguments.length; i++){
-			var type = arguments[i];
-			if (type == null){
-				//	Null.
-				expected.push('null');
-			}
-			else if (typeof type == 'string'){
-				//	Type.
-				expected.push(type);
-			}
-			else {
-				//	Constructor function.
-				expected.push(tk.functionName(type));
-			}
-		}
-		throw 'Incorrect parameter type: ' 
-			+ (typeof object) + ' (expected one of ' 
-			+ expected.join(', ') + ')';
-	}
+  //	Create the guts.
+  guts = new ToolkitGuts();
 
-	tk.resolve = function(target){
-		/*
-			Call `target` if it's a function, passing it the remainder of the 
-			parameters passed to this function.
-		*/
-		if (typeof target !== 'function'){
-			return target;
-		}
-		var toPass = [].slice.call(arguments);
-		toPass.splice(0, 1);
-		return target.apply(null, toPass);
-	}
+  Request = function () {
+    function Request(tk1, method, url) {
+      _classCallCheck(this, Request);
 
-	tk.log = function(){
-		/*
-			Log all arguments if this toolkit is configured to be in debug 
-			mode.
-		*/
-		if (tk.config.debug){
-			console.log.apply(null, arguments);
-		}
-	}
+      this.tk = tk1;
+      this.info = {
+        method: method,
+        url: url,
+        success: function success() {
+          return {};
+        },
+        failure: function failure() {
+          return {};
+        },
+        query: {},
+        headers: {},
+        body: null
+      };
+    }
 
-	tk.time = function(){
-		/*
-			Return the current system time, in milliseconds.
-		*/
-		var date = new Date();
-		return data.getTime();
-	}
+    _createClass(Request, [{
+      key: 'success',
+      value: function success(callback) {
+        this.info.success = callback;
+        return this;
+      }
+    }, {
+      key: 'failure',
+      value: function failure(callback) {
+        this.info.failure = callback;
+        return this;
+      }
+    }, {
+      key: 'json',
+      value: function json(data) {
+        this.info.headers['Content-Type'] = 'application/json';
+        this.info.body = this.tk.unbound(data);
+        return this;
+      }
+    }, {
+      key: 'data',
+      value: function data(_data) {
+        var mimetype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'text/plain';
 
-	tk.range = function(max){
-		/*
-			::argspec -
-			Return a list containing the integers between 0 and `max`.
+        this.info.headers['Content-Type'] = mimetype;
+        this.info.body = _data;
+        return this;
+      }
+    }, {
+      key: 'header',
+      value: function header(key, value) {
+        this.info.headers[key] = value;
+        return this;
+      }
+    }, {
+      key: 'query',
+      value: function query(map) {
+        this.info.query = map;
+        return this;
+      }
 
-			::argspec min, max
-			Return a list containing the intergers between `min` and `max`.
-		*/
-		var min = 0, max = max;
-		if (arguments.length > 1){
-			min = arg;
-			max = arguments[1];
-		}
+      //	TODO: More mimetype support.
 
-		var list = [];
-		for (var k = min; k < max; k++){
-			list.push(k);
-		}
-		return list;
-	}
+    }, {
+      key: 'send',
+      value: function send() {
+        var _this = this;
 
-	tk.tag = function(name){
-		var e = new ToolkitSelection(document.createElement(name)),
-			varg = tk.varg.on(arguments);
+        var fullURL, key, mimetypeOut, processResponse, queryKeys, queryStatements, ref, serializedBody, value, xhr;
+        //	Declare response callback.
+        processResponse = function processResponse(xhr) {
+          var data, mimetype, status;
+          status = xhr.status;
+          mimetype = xhr.getResponseHeader('Content-Type');
+          data = xhr.responseText;
+          switch (mimetype) {
+            case 'application/json':
+              data = JSON.parse(data);
+          }
+          _this.tk.log('Recieved ' + status + ' (' + _this.info.method + ', ' + _this.info.url + ')');
+          return (status < 400 ? _this.info.success : _this.info.failure)(data, status);
+        };
 
-		var cls = varg(1, null),
-			html = varg(2, '');
-		return e.classify(cls).html(html);
-	}
+        //	Prepare data.
+        fullURL = this.info.url;
+        serializedBody = '';
+        queryKeys = Object.keys(this.info.query);
+        if (queryKeys > 0) {
+          queryStatements = function () {
+            var j, len, results;
+            results = [];
+            for (j = 0, len = queryKeys.length; j < len; j++) {
+              key = queryKeys[j];
+              results.push(key + '=' + encodeURIComponent(this.info.query[key]));
+            }
+            return results;
+          }.call(this);
+          fullURL += '?' + queryStatements.join('&');
+        }
+        if (this.info.body) {
+          mimetypeOut = this.info.headers['Content-Type'];
+          switch (mimetypeOut) {
+            case 'application/json':
+              serializedBody = JSON.stringify(this.info.body);
+              break;
+            default:
+              throw 'Unknown outgoing mimetype ' + mimetypeOut;
+          }
+        }
+        //	Prepare an XHR.
+        xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+          if (this.readyState === 4) {
+            return processResponse(this);
+          }
+        };
+        xhr.open(this.info.method, fullURL, true);
+        ref = this.info.headers;
+        for (key in ref) {
+          value = ref[key];
+          xhr.setRequestHeader(key, value);
+        }
+        xhr.send(serializedBody);
+        return this.tk.log('Sent (' + this.info.method + ', ' + this.info.url + ')', this.info.body);
+      }
+    }]);
 
-	tk.iter = function(iterable, callback){
-		/*
-			Iterate an object or array.
-		*/
-		switch (tk.typeCheck(iterable, Array, 'object')){
-			case 0:
-				for (var i = 0; i < iterable.length; i++){
-					callback(iterable[i], i);
-				}
-				break;
-			case 1:
-				for (var property in iterable){
-					callback(property, iterable[property]);
-				}
-		}
-	}
+    return Request;
+  }();
 
-	tk.comprehension = function(ary, callback){
-		var comprehension = [];
-		for (var i = 0; i < ary.length; i++){
-			var value = callback(ary[i], i);
-			if (value !== undefined){
-				comprehension.push(value);
-			}
-		}
-		return comprehension;
-	}
+  guts.attach(callable(_RequestModule = function () {
+    function _RequestModule(tk1) {
+      _classCallCheck(this, _RequestModule);
 
-	tk.init = function(initFunction){
-		tk.initFunctions.push(initFunction);
-	}
+      this.tk = tk1;
+      this.called = 'request';
+    }
 
-	tk.inspection = function(inspectFunction){
-		tk.inspectionFunctions.push(inspectFunction);
-	}
+    _createClass(_RequestModule, [{
+      key: '_call',
+      value: function _call(method, url) {
+        return new Request(this, method, url);
+      }
+    }]);
 
-	/* ---- Delay ---- */
-	function Timeout(callback, milliseconds){
-		this.handle = null;
-	
-		this.start = function(){
-			this.handle = setTimeout(callback, milliseconds);
-			return this;
-		}
-	
-		this.cancel = function(){
-			clearTimeout(this.handle);
-			this.handle = null;
-			return this;
-		}
-	}
-	
-	tk.timeout = function(func, milliseconds){
-		var t = new Timeout(func, milliseconds);
-		t.start();
-		return t;
-	}
-	
-	function Interval(callback, milliseconds){
-		this.milliseconds = milliseconds;
-		this.handle = null;
-	
-		this.time = function(milliseconds){
-			var pausedHere = this.handle != null;
-			if (pausedHere){
-				this.stop();
-			}
-			this.milliseconds = milliseconds;
-			if (pausedHere){
-				this.start();
-			}
-			return this;
-		}
-	
-		this.start = function(){
-			if (this.handle != null){
-				throw 'Already started';
-			}
-			this.handle = setInterval(callback, this.milliseconds);
-			return this;
-		}
-	
-		this.stop = function(){
-			if (this.handle == null){
-				throw 'Not running';
-			}
-			clearInterval(this.handle);
-			this.handle = null;
-			return this;
-		}
-	}
-	
-	tk.interval = function(callback, milliseconds){
-		var i = new Interval(callback, milliseconds);
-		i.start();
-		return i;
-	}
-	
+    return _RequestModule;
+  }()));
 
-	/* ---- Shorthand notation ---- */
-	tk.snap = function(shorthand, rootElement){
-		if (rootElement === undefined){
-			//	HOTFIX for behaviour improvement
-			return tk.snap(shorthand, tk('body'));
-		}
-	
-		//	Process timeouts.
-		var oArguments = [].slice.call(arguments);
-		oArguments.splice(0, 2);
-		var timeoutMatcher = /\.\.\.\(([0-9]+)\)/;
-		if (timeoutMatcher.test(shorthand)){
-			//	Includes sleeps.
-			var steps = shorthand.split(timeoutMatcher),
-				isTimeout = false,
-				timeout = 0,
-				returnValue;
-			tk.iter(steps, function(step, i){
-				if (isTimeout){
-					timeout += step;
-				}
-				else {
-					if (timeout > 0){
-						tk.timeout(function(){
-							tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
-						}, timeout);
-					}
-					else {
-						returnValue = tk.snap.apply(tk, [steps[i], rootElement].concat(oArguments));
-					}
-				}
-	
-				isTimeout = !isTimeout;
-			});
-	
-			return returnValue;
-		}
-	
-		//	Collect variables.
-		var variables = {
-			'$e': rootElement
-		};
-		for (var i = 2; i < arguments.length; i++){
-			var arg = arguments[i];
-			if (typeof arg == 'object' && arg !== null){
-				for (var name in arg){
-					variables['$' + name] = arg[name];
-				}
-			}
-			else {
-				variables['$' + (i - 2)] = arg;
-			}
-		}
-	
-		function error(){
-			throw [].slice.call(arguments).join(' ') + ' (in snap: ' + shorthand.substring(0, shorthand.length - 1) + ')';
-		}
-	
-		function resolveVariable(variable){
-			var expression;
-	
-			//	Resolve values.
-			if (variable === undefined || variable.length == 0){
-				variable = '$0';
-			}
-			else if (expression = /([a-z]+)\((.*?)\)/.exec(variable)){
-				var name = expression[1],
-					params = tk.comprehension(expression[2].split(/\s+/), tk.fn.cleanWhitespace),
-					found = false;
-				
-				tk.iter(tk.snap.storage.functions, function(key, func){
-					if (key == name){
-						variable = func(params, resolveVariable);
-						found = true;
-						return false;
-					}
-				});
-				if (!found){
-					error('No such function:', name);
-				}
-			}
-			
-			if (variable[0] == '$'){
-				variable = variables[variable];
-			}
-	
-			if (variable == 'true'){ return true; }
-			else if (variable == 'false'){ return false; }
-			return variable;
-		}
-	
-		function resolveOne(left, right, prefix){
-			right = resolveVariable(right);
-	
-			//	Resolve a single expression.
-			if (prefix.length > 0){
-				element.attr(left, right);
-			}
-			else {
-				//	Locate directive.
-				var expression;
-				if (!(expression = /^([a-z]+)(?:\((.*?)\)|)$/.exec(left))){
-					error('Invalid directive:', left);
-				}
-	
-				var name = expression[1],
-					pure = expression[2] === undefined ? [] : expression[2].split(/\s+/),
-					params = tk.comprehension(pure, function(s){
-						s = s.trim();
-						if (s.length > 0){ return s; }
-					}),
-					found = false;
-				
-				tk.iter(tk.snap.storage.directives, function(key, directive){
-					if (name == key){
-						if (directive(params, right, element, resolveVariable) === false){
-							error('Illegal call to directive:', left);
-						}
-						found = true;
-						return false;
-					}
-				});
-				if (!found){
-					error('No such directive:', name);
-				}
-			}
-		}
-	
-		function createReferencedElement(tagName, idMod, classMod){
-			var created = tk.tag(tagName);
-			if (idMod.length > 0){
-				created.attr('id', idMod.substring(1))
-			}
-			if (classMod.length > 0){
-				var classes = classMod.split('.');
-				for (var i = 1; i < classes.length; i++){
-					created.classify(classes[i]);
-				}
-			}
-			return created;
-		}
-	
-		shorthand += '&';
-		var depthFinder = /(.*?)([>&^])/g,
-			element = rootElement,
-			depth,
-			last = element;
-		while (depth = depthFinder.exec(shorthand)){
-			var siblingMode = depth[2].length > 0 && depth[2] == '&',
-				riseMode = depth[2].length > 0 && depth[2] == '^',
-				item = depth[1];
-	
-			//	Parse.
-			var match = /^([+\-]|)(\*|)([$a-z0-9]+)((?:\([$a-z0-9]+\))|)((?:#\w+)|)((?:\.[\w\-]+)+|)((?:\:{1,2}[$\w\s\-()]+(?:=[$\w\s.]+){0,1})+|)$/.exec(item),
-				resolve = function(){ return element; };
-	
-			if (match == null){
-				error('Invalid element reference:', item);
-			}
-			//	Parse match for maintainability
-			var elementPolicy = match[1],
-				laxElementPolicy = match[2].length > 0,
-				tagName = match[3],
-				childIndex = match[4],
-				idMod = match[5],
-				classMod = match[6],
-				assignments = match[7];
-	
-			//	Process child index.
-			if (childIndex.length > 0){
-				childIndex = resolveVariable(childIndex.substring(1, childIndex.length - 1));
-			}
-			else {
-				childIndex = null;
-			}
-	
-			if (elementPolicy.length == 0){
-				//	Selection.
-				if (tagName == '$e'){
-					element = rootElement;
-				}
-				else {
-					element = element.children(tagName + idMod + classMod);
-					if (element.empty){
-						error('No matched element for reference:', item);
-					}
-					if (childIndex != null){
-						element = element.ith(childIndex);
-					}
-				}
-			}
-			else {
-				//	Create.
-				var create = true;
-				if (laxElementPolicy){
-					element = element.children(tagName + idMod + classMod);
-					create = element.empty;
-					if (childIndex != null){
-						create = create || element.length <= childIndex;
-						if (!create){
-							element = element.ith(childIndex);
-						}
-					}
-					if (create){
-						element = element.back();
-					}
-				}
-	
-				if (create){
-					var parent = element;
-					element = createReferencedElement(tagName, idMod, classMod);
-					
-					resolve = function(){
-						elementPolicy == '-' ? parent.prepend(element) : parent.append(element);
-					}
-				}
-			}
-	
-			if (assignments.length > 0){
-				var matcher = /:(:|)([$\w\s\-()]+)((?:=[$\w\s.]+)|)/g,
-					assignment;
-				while (assignment = matcher.exec(assignments)){
-					//	Parse for maintainability.
-					var prefix = assignment[1],
-						left = assignment[2],
-						right = assignment[3].substring(1);
-	
-					if (left.length > 0){
-						resolveOne(left, right, prefix);
-					}
-					else {
-						resolveOne(left, 'v', prefix);
-					}
-				}
-			}
-	
-			resolve();
-			if (siblingMode){
-				if (element.backChain){
-					last = element;
-					element = element.back();
-				}
-			}
-			else if (riseMode){
-				last = element.back();
-				element = last.back();
-			}
-		}
-	
-		return last;
-	}
-	tk.snap.storage = {
-		directives: {
-			html: function(params, right, element){
-				if (params.length > 0){ return false; }
-				element.html(right);
-			},
-			text: function(params, right, element){
-				if (params.length > 0){ return false; }
-				element.text(right);
-			},
-			remove: function(params, right, element){
-				if (params.length > 0){ return false; }
-				element.remove();
-			},
-			wipe: function(params, right, element){
-				if (params.length > 0){ return false; }
-				element.html('');
-			},
-			class: function(params, right, element, resolve){
-				if (params.length == 0){ return false; }
-				var varg = tk.varg.on(params);
-				element.classify(resolve(params[0]), resolve(varg(1, true)), +resolve(varg(2, -1)));
-			},
-			declass: function(params, right, element, resolve){
-				if (params.length == 0){ return false; }
-				var varg = tk.varg.on(params);
-				element.classify(resolve(params[0]), !resolve(varg(1, true)), +resolve(varg(2, -1)));
-			},
-			css: function(params, right, element, resolve){
-				if (params.length == 0){ return false; }
-				element.css(resolve(params[0]), resolve(params[1]));
-			}
-		},
-		functions: {
-			null: function(params, resolve){
-				return resolve(params[0]) === null;
-			},
-			notnull: function(params, resolve){
-				return resolve(params[0]) !== null;
-			}
-		}
-	}
-	tk.snap.directive = function(name, directive){
-		tk.snap.storage.directives[name] = directive;
-	}
-	tk.snap.function = function(name, func){
-		tk.snap.storage.functions[name] = func;
-	}
+  ToolkitSelection = function () {
+    var ToolkitSelection = function () {
+      _createClass(ToolkitSelection, null, [{
+        key: 'clean',
+        value: function clean(set) {
+          var clean, item, j, len;
+          clean = [];
+          for (j = 0, len = set.length; j < len; j++) {
+            item = set[j];
+            if (item instanceof ToolkitSelection) {
+              clean = clean.concat(item.set);
+            } else {
+              clean.push(item);
+            }
+          }
+          return clean;
+        }
+      }]);
 
-	/* ---- Selection ---- */
-	function ToolkitSelection(selection){
-		/*
-			A selection of a set of elements.
-		*/
-		var self = this;
-		this.backChain = tk.varg(arguments, 1, null);
-		
-		//	Resolve the selection.
-		this.set = (function(){
-			if (selection instanceof ToolkitSelection){
-				//  Duplicate.
-				selection = selection.set.splice();
-			}
-			switch (tk.typeCheck(selection, Element, Window, NodeList, Array, 'string')){
-				case 0:
-				case 1: return [selection];
-				case 2:
-				case 3:
-					var elements = [];
-					//  Collect elements, accounting for `ToolkitSelection` 
-					//  presence.
-					for (var i = 0; i < selection.length; i++){
-						var item = selection[i];
-						if (item instanceof ToolkitSelection){
-							elements = elements.concat(item.set);
-						}
-						else {
-							elements.push(item);
-						}
-					}
-					return elements;
-				case 4: 
-					return tk.config.documentRoot.querySelectorAll(selection);
-			}
-		})();
-		this.set = [].slice.call(this.set);
-		//	Define the cardinality of the selection.
-		this.length = this.set.length;
-		this.empty = this.length == 0;
-	
-		this.back = function(){
-			/*
-				Return the `ToolkitSelection` that generated this one (through a 
-				call to `append`, `children`, etc.).
-			*/
-			if (this.backChain == null){
-				throw 'Illegal back()';
-			}
-			return this.backChain;
-		}
-	
-		this.ith = function(i){
-			/*
-				Return a new `ToolkitSelection` selecting the `i`th selected 
-				element, or the `i`th selected element itself if a second 
-				positional argument is `false`.
-				
-				If `i` is out of bounds, throw an exception.
-			*/
-			if (i < 0 || i >= this.length){
-				throw 'Out of bounds: ' + i;
-			}
-			if (tk.varg(arguments, 1, true)){
-				return new ToolkitSelection(this.set[i], this);
-			}
-			return this.set[i];
-		}
-	
-		this.first = function(){
-			return this.ith(0, arguments.length > 0 && !arguments[0]);
-		}
-	
-		this.reversed = function(){
-			/*
-				Return a new `ToolkitSelection` selecting the same set, but in 
-				reverse order.
-			*/
-			var newSet = this.set.slice();
-			newSet.reverse();
-			return new ToolkitSelection(newSet, this);
-		}
-	
-		this.reduce = function(reducer){
-			/*
-				Return a new `ToolkitSelection` selecting all selected elements 
-				that match the query selector `reducer`.
-	
-				If `reducer` is a function, return a new `ToolkitSelection` 
-				selecting all elements for which it returned true. 
-			*/
-			var newSet;
-			switch (tk.typeCheck(reducer, 'string', 'function')){
-				case 0:
-					newSet = this.comprehension(function(e){
-						if (e.is(reducer)){ return e; }
-					});
-					break;
-				case 1:
-					newSet = this.comprehension(reducer);
-			}
-			
-			return new ToolkitSelection(newSet, this);
-		}
-	
-		this.extend = function(extension){
-			/*
-				Return a new `ToolkitSelection` with an expanded set of selected 
-				elements.
-			*/
-			switch (tk.typeCheck(extension, ToolkitSelection, Array)){
-				case 0:
-					return new ToolkitSelection(this.set.concat(extension.set), this);
-				case 1:
-					var elements = [];
-					//	Convert `ToolkitSelection`s to elements.
-					for (var i = 0; i < extension.length; i++){
-						var item = extension[i];
-						if (item instanceof ToolkitSelection){
-							elements = elements.concat(item.set);
-						}
-						else {
-							elements.push(item);
-						}
-					}
-					return new ToolkitSelection(this.set.concat(extension), this);
-			}
-		}
-	
-		this.parents = function(){
-			/*
-				Return a new `ToolkitSelection` selecting parents of the currently 
-				selected elements.
-	
-				Can be passed any permutation of one or more of the following
-				parameters:
-				* `high`: Whether to select all parents rather than only immediate
-					ones (default `true`).
-				* `reducer`: A filter on the selected parents. Either a query 
-					selector or a boolean function passed each parent element and 
-					the index of its selected child.
-			*/
-			if (arguments.length == 1 && typeof arguments[0] == 'boolean'){
-				//	Recurse with long-hand call.
-				return this.parents('*', arguments[0]);
-			}
-	
-			//	Collect parameters.
-			var varg = tk.varg.on(arguments);
-			var reducer = varg(0, '*'),
-				high = varg(1, true);
-			//	Assert parameter types.
-			var reduction = tk.typeCheck(reducer, 'string', 'function');
-			tk.typeCheck(high, 'boolean');
-	
-			var parents = [];
-			function filter(e, i){
-				return (
-					(reduction == 0 && e.matches(reducer)) ||
-					(reduction == 1 && reducer(e, i))
-				);
-			}
-	
-			this.iter(function(e, i){
-				var parent = e.parentNode;
-				while (parent != tk.config.documentRoot){
-					if (filter(parent, i)){
-						parents.push(parent);
-					}
-					if (!high){ return; }
-					parent = parent.parentNode;
-				}
-			}, false);
-			return new ToolkitSelection(parents, this);
-		}
-		
-		this.children = function(){
-			/*
-				Return a new `ToolkitSelection` selecting all the childen of all 
-				selected elements.
-	
-				Can be passed any permutation of one or more of the following
-				parameters:
-				* `deep`: Whether to select all children rather than only immediate
-					ones (default `true`).
-				* `reducer`: A filter on the selected children. Either a query 
-					selector or a boolean function passed each child element and 
-					the index of its selected parent.
-			*/
-			if (arguments.length == 1 && typeof arguments[0] == 'boolean'){
-				//	Recurse with long-hand call.
-				return this.children('*', arguments[0]);
-			}
-			
-			//	Collect parameters.
-			var varg = tk.varg.on(arguments);
-			var selector = varg(0, '*'),
-				deep = varg(1, true);
-			//	Assert parameter types.
-			var selection = tk.typeCheck(selector, 'string', 'function');
-			tk.typeCheck(deep, 'boolean');
-	
-			var children = [];
-			function retriever(e, i){
-				if (selection == 0){
-					return deep ? e.querySelectorAll(selector) : e.children;
-				}
-				else {
-					var check = deep ? e.querySelectorAll('*') : e.children;
-					return tk.comprehension(check, function(c){
-						if (selector(new ToolkitSelection(c), i)){ return c; }
-					});
-				}
-			}
-	
-			this.iter(function(e, i){
-				var vals = retriever(e, i);
-				for (var i = 0; i < vals.length; i++){
-					children.push(vals[i]);
-				}
-			}, false);
-			return new ToolkitSelection(children, this);
-		}
-		
-		this.copy = function(){
-			/*
-				Deep-copy the first selected element and return a 
-				`ToolkitSelection` selecting it.
-	
-				::firstonly
-			*/
-			return new ToolkitSelection(this.set[0].cloneNode(true), this);
-		}
-	
-		this.equals = function(object){
-			/*
-				Return:
-				* Given an `Element`, whether the selected set contains only that 
-					element.
-				* Given an `Array`, whether the array contains all elements of the 
-					selected set, and vice-versa.
-				* Given a `ToolkitSelection`, whether it is selecting the identical 
-					set of elements.
-			*/
-			switch(tk.typeCheck(object, Element, Array, ToolkitSelection)){
-				case 0:
-					return self.length == 1 && self.set[0] == object;
-				case 2:
-					object = object.set;
-				case 1:
-					var diff = false;
-					iter(object, function(e){
-						if (self.set.indexOf(e) == -1){
-							diff = true;
-							return false;
-						}
-					});
-					iter(self.set, function(e){
-						if (object.indexOf(e) == -1){
-							diff = true;
-							return false;
-						}
-					})
-					return !diff && self.length == object.length;
-			}
-		}
-	
-		this.iter = function(func){
-			/*	
-				Iterate the currently selected set, passing each selected element 
-				and its index to a callback.
-	
-				Like `iter()`, `func` can return `false` to cease the iteration.
-			*/
-			var propogate = tk.varg(arguments, 1, true);
-			for (var i = 0; i < this.set.length; i++){
-				var e = this.set[i];
-				if (propogate){
-					e = new ToolkitSelection(e, this);
-				}
-				if (func(e, i) === false){
-					break;
-				}
-			}
-			return this;
-		}
-	
-		this.comprehension = function(func){
-			/*
-				Perform a comprehension on the currently selected set of elements. 
-				All non-`undefined` values returned from `func` are added to an 
-				array which is returned by this function.
-			*/
-			var propogate = tk.varg(arguments, 1, true),
-				result = [];
-			for (var i = 0; i < this.set.length; i++){
-				var e = this.set[i];
-				if (propogate){
-					e = new ToolkitSelection(e, this);
-				}
-				var value = func(e, i);
-				if (value !== undefined){
-					result.push(value);
-				}
-			}
-			return result;
-		}
-	
-		this.is = function(check){
-			/*	
-				Return whether all selected elements match a selector or the
-				condition imposed by a boolean function.
-			*/
-			//	Assert parameter type.
-			var type = tk.typeCheck(check, 'string', 'function');
-			for (var i = 0; i < this.length; i++){
-				var e = this.set[i];
-				if (type == 0){
-					if (!e.matches(check)){
-						return false;
-					}
-				}
-				else {
-					if (!check(new ToolkitInstance(e), i)){
-						return false;
-					}
-				}
-			}
-			return true;
-		}
-	
-		this.classes = function(){
-			/*
-				Return the complete list of classes for all selected elements.
-			*/
-			var all = [];
-			this.iter(function(e){
-				var mine = e.className.split(/\s+/);
-				for (var i = 0; i < mine.length; i++){
-					var cls = mine[i];
-					if (all.indexOf(cls) == -1){
-						all.push(cls);
-					}
-				}
-			}, false);
-			return all;
-		}
-	
-		this.value = function(){
-			/*
-				Return the value of the first selected element if it's an input,
-				or if a parameter is provided set the value of each selected input.
-	
-				::firstonly
-			*/
-			if (arguments.length > 0){
-				var value = arguments[0];
-				this.iter(function(e){
-					if (e.tag().toLowerCase() == 'select'){
-						e.children('option').attr('selected', function(g){
-							return g.attr('value') == value ? true : null;
-						});
-					}
-					else {
-						e.ith(0, false).value = value;
-					}
-				});
-				return this;
-			}
-			else {
-				if (this.set[0].type == 'checkbox'){
-					return this.set[0].checked;
-				}
-				var val = this.set[0].value;
-				if (val === undefined || val.length == 0){
-					return null;
-				}
-				if (this.set[0].getAttribute('type') == 'number'){
-					return +val;
-				}
-				return val;
-			}
-		}
-	
-		this.attr = function(arg){
-			/*
-				Get, set, or modify element attributes.
-	
-				To remove an attribute, pass `null` as its value.
-	
-				::argspec attr
-				Return the value of an attribute on the first selected element, 
-				or `null` if it isn't present.
-	
-				::argspec attr, value
-				Set the value of `attr` to `value` for each selected element. 
-				`value` can be a function to resolve.
-	
-				::argspec attrMap
-				Set the attribute values of all selected elements from the object
-				`attrMap`. Values can be functions to resolve.
-	
-				::softfirstonly
-			*/
-			switch (tk.typeCheck(arg, 'string', 'object')) {
-				case 0:
-					if (arguments.length > 1){
-						//	Single attribute assignment.
-						var name = arg, value = arguments[1];
-						switch (tk.typeCheck(value, null, 'string', 'function')){
-							case 0:
-								this.iter(function(e, i){
-									e.removeAttribute(name, null);
-								}, false);
-								break;
-							default:
-								this.iter(function(e, i){
-									var x = tk.resolve(value, new ToolkitSelection(e), i);
-									if (x === null){
-										e.removeAttribute(name);
-									}
-									else {
-										e.setAttribute(name, x);
-									}
-								}, false);
-						}
-					}
-					else {
-						if (this.set[0].hasAttribute(arg)){
-							return this.set[0].getAttribute(arg);
-						}
-						return null;
-					}
-					break;
-				case 1:
-					//	Multi-set.
-					this.iter(function(e, i){
-						for (var name in arg){
-							e.setAttribute(name, tk.resolve(arg[name], e, i));
-						}
-					}, false);
-					break;
-			}
-			return this;
-		}
-	
-		this.css = function(prop){
-			/*
-				Get computed styles and set element-level styles.
-	
-				Style names can be in camel or hyphen case.
-				
-				::argspec - 
-				Return the computed value of the CSS style named `prop` for the
-				first selected element.
-	
-				::argspec styleMap
-				Set the style of each selected element based on that style's value
-				in `styleMap`. Values can be functions to resolve.
-	
-				::argspec -, value
-				Set the element-level style for each selected element. `value`
-				can be a function to resolve.
-	
-				::softfirstonly
-			*/
-			function applyOne(name, value){
-				//	Make dash case.
-				name = name.replace(/-([a-z])/g, function(g){
-					return g[1].toUpperCase();
-				});	
-				self.iter(function(e, i){
-					var realValue = tk.resolve(value, e, i);
-					if (typeof realValue == 'number'){
-						//	Default to pixels.
-						realValue = realValue + 'px';
-					}
-					e.style[name] = realValue;
-				}, false);
-			}
-	
-			switch (tk.typeCheck(prop, 'string', 'object')){
-				case 0:
-					if (arguments.length > 1){
-						//	Set a single style.
-						applyOne(prop, arguments[1]);
-					}
-					else {
-						return window.getComputedStyle(this.set[0]).getPropertyValue(prop);
-					}
-					break;
-				case 1:
-					//	Multi-set.
-					for (var name in prop){
-						applyOne(name, prop[name]);
-					}
-					break;
-			}
-			return this;
-		}
-	
-		this.on = function(arg){
-			/*	
-				All callbacks are passed the firing element and its index in the 
-				bound selection, in that order.
-	
-				::argspec event, callback
-				Bind `callback` to `event` for all selected elements.
-	
-				::argspec callbackMap
-				Bind callbacks from a event, callback mapping.
-			*/
-			function setOne(event, func){
-				self.iter(function(e, i){
-					if (!tk.prop(e, '__listeners__')){
-						e.__listeners__ = [];
-					}
-					var add = {
-						event: tk.resolve(event, e, i),
-						func: function(g){
-							func(new ToolkitSelection(e), g, i);
-						}
-					}
-					e.__listeners__.push(add)
-					e.addEventListener(add.event, add.func);
-				}, false);
-			}
-	
-			switch (tk.typeCheck(arg, 'string', 'object')){
-				case 0:
-					//	Single set.
-					setOne(arg, arguments[1]);
-					break;
-				case 1:
-					//	Multi-set.
-					for (var name in arg){
-						setOne(name, arg[name]);
-					}
-					break;
-			}
-			return this;
-		}
-	
-		this.off = function(event){
-			/*
-				Remove all listeners for on `event` from all selected elements.
-			*/
-			this.iter(function(e){
-				var list = tk.prop(e, '__listeners__', []), remove = [];
-				//	Find the callbacks to remove.
-				tk.iter(list, function(o, i){
-					if (o.event == event){
-						e.removeEventListener(o.event, o.func);
-						remove.push(i);
-					}
-				});
-				//	Remove all found callbacks.
-				tk.iter(remove, function(i){
-					list = list.splice(i, 1);
-				});
-			}, false);
-			return this;
-		}
-	
-		this.classify = function(arg){
-			/*
-				Add, remove, or toggle a class.
-	
-				All flags can be a function to resolve.
-	
-				::argspec cls
-				Add `cls` to all selected elements.
-				
-				::argspec cls, flag
-				Add `cls` to all selected elements, or remove it if `flag` is 
-				`false`.
-	
-				If `flag` is the string `'toggle'`, toggle the class.
-	
-				::argspec cls, flag, time
-				Perform the operation above, then perform the inverse after `time` 
-				milliseconds.
-	
-				::argspec clsMap
-				Apply classes to all selected elements based on a class, flag 
-				mapping.
-			*/
-			function classifyOne(cls, flag, time){
-				var selector = '.' + cls;
-				if (flag == 'toggle'){
-					//	Special second parameter case.
-					flag = function(e, i){
-						return !e.is(selector);
-					}
-				}
-				self.iter(function(e, i){
-					var actualFlag = tk.resolve(flag, e, i),
-						classes = e.classes();
-					if (actualFlag){
-						//	Add.
-						if (!e.is(selector)){
-							classes.push(cls);
-							e.set[0].className = classes.join(' ').trim();
-						}
-					}
-					else {
-						//	Remove.
-						if (e.is(selector)){
-							classes.splice(classes.indexOf(cls), 1);
-							e.set[0].className = classes.join(' ').trim();
-						}
-					}
-					var actualTime = tk.resolve(time, e, i);
-					if (actualTime >= 0){
-						//	Reverse the classification later.
-						tk.timeout(function(){
-							classifyOne(cls, !actualFlag, -1);
-						}, actualTime);
-					}
-				});
-			}
-	
-			switch (tk.typeCheck(arg, 'string', 'object')){
-				case 0:
-					//	Set a single attribute.
-					var varg = tk.varg.on(arguments);
-					classifyOne(arg, varg(1, true), varg(2, -1));
-					break;
-				case 1:
-					//	Set attributes from a mapping.
-					tk.iter(arg, classifyOne);
-					break;
-			}
-			return this;
-		}
-	
-		this.remove = function(){
-			/*
-				Remove all currently selected elements from the DOM (they remain 
-				selected).
-			*/
-			this.iter(function(e){
-				if (e.parentNode != null){
-					e.parentNode.removeChild(e);
-				}
-			}, false);
-			return this;
-		}
-	
-		this.append = function(arg){
-			/*
-				Append an element or array of elements to the first selected 
-				element. If the parameter or any of the contents of an array are a
-				`ToolkitSelection`, all of its selected elements are appended.
-	
-				Returns a new `ToolkitSelection` selecting all appended elements.
-				
-				::firstonly
-			*/
-			switch (tk.typeCheck(arg, Array, ToolkitSelection, 'string', Element)){
-				case 0:
-					var set = [];
-					//	Collect.
-					tk.iter(arg, function(e, i){
-						if (e instanceof ToolkitSelection){
-							e.remove();
-							set = set.concat(e.set);
-						}
-						else {
-							e.parentNode.removeChild(e);
-							set.push(e);
-						}
-					});
-					//	Insert.
-					tk.iter(set, function(e){
-						var selection = new ToolkitSelection(e, this);
-						tk.iter(tk.inspectionFunctions, function(f){
-							f(selection);
-						});
-						self.set[0].appendChild(e);
-					});
-					return new ToolkitSelection(set, this);
-				case 1:
-					arg.iter(function(g){
-						g.remove();
-						self.set[0].appendChild(g.set[0]);
-						tk.iter(tk.inspectionFunctions, function(f){
-							f(g);
-						});
-					});
-					arg.backChain = this;
-					return arg;
-				case 2:
-					arg = document.createElement(arg);
-				case 3:
-					self.set[0].appendChild(arg);
-					var selection = new ToolkitSelection(arg, this)
-					tk.iter(tk.inspectionFunctions, function(f){
-						f(selection);
-					});
-					return selection;
-			}
-		}
-	
-		this.prepend = function(e){
-			/*
-				Prepend an element or array of elements to the first selected 
-				element. If the parameter or any of the contents of an array are a
-				`ToolkitSelection`, all of its selected elements are prepended.
-	
-				Returns a new `ToolkitSelection` selecting all prepended elements.
-				
-				::firstonly
-			*/
-			switch (tk.typeCheck(e, Array, ToolkitSelection, Element)){
-				case 0:
-					var set = [];
-					//	Collect.
-					tk.iter(arg, function(e, i){
-						if (e instanceof ToolkitSelection){
-							e.remove();
-							set = set.concat(e.set);
-						}
-						else {
-							e.parentNode.removeChild(e);
-							set.push(e);
-						}
-					});
-					//	Insert.
-					tk.iter(set, function(e){
-						var selection = new ToolkitSelection(e, this);
-						tk.iter(tk.inspectionFunctions, function(f){
-							f(selection);
-						});
-						self.set[0].insertBefore(e, self.set[0].firstChild);
-					});
-					return new ToolkitSelection(set, this);
-				case 1:
-					e.reversed().iter(function(g){
-						g.remove();
-						self.set[0].insertBefore(g.set[0], self.set[0].firstChild);
-						tk.iter(tk.inspectionFunctions, function(f){
-							f(g);
-						});
-					});
-					e.backChain = this;
-					return e;
-				case 2:
-					self.set[0].insertBefore(e, self.set[0].firstChild);
-					var selection = new ToolkitSelection(e, this);
-					tk.iter(tk.inspectionFunctions, function(f){
-						f(selection);
-					});
-					return selection;
-			}
-		}
-	
-		this.tag = function(){
-			/*
-				Return the tag name of the first selected element.
-	
-				::firstonly
-			*/
-			return this.set[0].tagName;
-		}
-	
-		this.next = function(){
-			/*
-				Return the next element sibling of the first selected element.
-	
-				::firstonly
-			*/
-			var next = this.set[0].nextElementSibling;
-			if (next == null){
-				next = [];
-			}
-			return new ToolkitSelection(next, this);
-		}
-	
-		this.prev = function(){
-			/*
-				Return the previous element sibling of the first selected element.
-	
-				::firstonly
-			*/
-			var n = this.set[0].previousElementSibling;
-			if (n == null){
-				n = [];
-			}
-			return new ToolkitSelection(n, this);
-		}
-	
-		this.html = function(){
-			/*
-				::argspec -
-				Return the HTML content of the first selected element.
-				
-				::argspec html
-				Set the HTML content of each selected element.
-	
-				::softfirstonly
-			*/
-			if (arguments.length > 0){
-				var h = arguments[0];
-				this.iter(function(e, i){
-					e.innerHTML = tk.resolve(h, new ToolkitSelection(e), i);
-				}, false);
-				return this;
-			}
-			else {
-				return this.set[0].innerHTML;
-			}
-		}
-	
-		this.text = function(){
-			/*
-				::argspec -
-				Get the text content of the first selected element.
-				
-				::argspec text
-				Set the text content of each selected element.
-				
-				::softfirstonly
-			*/
-			if (arguments.length > 0){
-				var t = arguments[0];
-				this.iter(function(e, i){
-					e.textContent = tk.resolve(t, new ToolkitSelection(e), i);
-				}, false);
-				return this;
-			}
-			else {
-				return this.set[0].textContent;
-			}
-		}
-	
-		this.select = function(){
-			/*
-				Select the first selected element if it's an input.
-	
-				::firstonly
-			*/
-			this.set[0].select();
-			return this;
-		}
-		
-		this.offset = function(){
-			/*
-				Return the (`x`, `y`) offset within the document of the first 
-				selected element.
-	
-				::firstonly
-			*/
-			var x = 0, y = 0, e = this.set[0];
-			while (e != null){
-				x += e.offsetLeft;
-				y += e.offsetTop;
-				e = e.offsetParent;
-			}
-			return {x: x, y: y};
-		}
-		
-		this.size = function(){
-			/*
-				Return the (`width`, `height`) size of the `content-box` of the 
-				first selected element.
-	
-				If a first argument is `false`, return the outer size including
-				margin and padding.
-			*/
-			var e = this.set[0],
-				box = e.getBoundingClientRect(),
-				size = {width: box.width, height: box.height};
-			if (tk.varg(arguments, 0, false)){
-				var style = window.getComputedStyle(e, null);
-				//	Add margin.
-				size.width 
-					+= style.getPropertyValue('margin-left') 
-					+ style.getPropertyValue('margin-right');
-				size.height 
-					+= style.getPropertyValue('margin-top') 
-					+ style.getPropertyValue('margin-bottom');
-				if (style.getPropertyValue('box-sizing') == 'border-box'){
-					//	Add padding.
-					size.width 
-						+= style.getPropertyValue('padding-left') 
-						+ style.getPropertyValue('padding-right');
-					size.height 
-						+= style.getPropertyValue('padding-top') 
-						+ style.getPropertyValue('padding-bottom');
-				}
-			}
-			return size;
-		}
-	
-		this.snap = function(shorthand){
-			var variables = [].slice.call(arguments);
-			variables.splice(0, 1);
-			return tk.snap.apply(tk, [shorthand, this].concat(variables));
-		}
-	
-		this.binding = function(){
-			return tk.binding.apply(tk, arguments)
-				.onto(this);
-		}
-		this.binding.snap = function(){
-			var args = [].slice.call(arguments);
-			return tk.binding.snap.apply(tk, [self].concat(args));
-		}
-	}
+      function ToolkitSelection(selection, parent1) {
+        _classCallCheck(this, ToolkitSelection);
 
-	/* ---- Requests ---- */
-	tk.requestProcessors = [];
-	
-	function Request(method, url){
-		var self = this;
-		this.fns = {
-			success: tk.fn.eatCall,
-			failure: tk.fn.eatCall
-		};
-		this.storage = {
-			url: url,
-			method: method,
-			query: {},
-			headers: {},
-			body: null
-		}
-	
-		this.success = function(success){
-			/*
-				Set the success callback.
-			*/
-			this.fns.success = success;
-			return this;
-		}
-	
-		this.failure = function(failure){
-			/*
-				Set the failure callback.
-			*/
-			this.fns.failure = failure;
-			return this;
-		}
-	
-		this.json = function(object){
-			/*
-				Provide an object to serialize as JSON for the body of this 
-				request.
-			*/
-			this.storage.headers['Content-Type'] = 'application/json';
-			this.storage.body = tk.unbound(object);
-			return this;
-		}
-	
-		this.text = function(object){
-			/*
-				Provide a text body.
-			*/
-			this.storage.headers['Content-Type'] = tk.varg(arguments, 1, 'text/plain');
-			this.storage.body = object;
-			return this;
-		}
-	
-		this.header = function(key, value){
-			/*
-				Provide a header.
-			*/
-			this.storage.headers[key] = value;
-			return this;
-		}
-	
-		this.query = function(map){
-			/*
-				Set the key, value mapping for the query string.
-			*/
-			this.storage.query = map;
-			return this;
-		}
-	
-		this._processResponse = function(xhr){
-			//	TODO: More;
-			//	Parse response.
-			var contentType = xhr.getResponseHeader('Content-Type'),
-				status = xhr.status,
-				responseData = xhr.responseText;;
-			switch (contentType){
-				case 'application/json':
-					responseData = JSON.parse(xhr.responseText)
-					break;				
-			}
-	
-			//	Log.
-			tk.log('Received ' + status + ' (' + this.storage.method + ', ' + this.storage.url + '):', responseData);
-	
-			//	Dispatch appropriate callback.
-			var callback = status < 400 ? this.fns.success : this.fns.failure;
-			callback(responseData, status);
-		}
-	
-		this.send = function(object){
-			var xhr = new XMLHttpRequest();
-	
-			tk.iter(tk.requestProcessors, function(f){
-				f(self);
-			});
-	
-			//	Create query string.
-			var fullURL = this.storage.url;
-			var queryItems = [];
-			tk.iter(this.storage.query, function(k, v){
-				queryItems.push(k + '=' + encodeURIComponent(v));
-			});
-			if (queryItems.length > 0){
-				fullURL += '?' + queryItems.join('&');
-			}
-	
-			xhr.onreadystatechange = function(){
-				if (this.readyState == 4){
-					self._processResponse(this);
-				}
-			}
-	
-			var processedBody = '';
-			if (this.storage.body != null){
-				//	Process body.
-				//	TODO: More;
-				var mimetype = this.storage.headers['Content-Type'];
-				switch (mimetype){
-					case 'text/plain':
-						break;
-					case 'application/json':
-						processedBody = JSON.stringify(this.storage.body);
-						break;
-					default:
-						throw 'Unknown request content type (' + mimetype + ')';
-				}
-			}
-	
-			xhr.open(this.storage.method, fullURL, true);
-			tk.iter(this.storage.headers, function(k, v){
-				xhr.setRequestHeader(k, v);
-			});
-	
-			xhr.send(processedBody);
-	
-			tk.log('Sent (' + method + ': ' + url + ')', this.storage.body);
-		}
-	}
-	
-	tk.request = function(method, url){
-		return new Request(method, url);
-	}
-	tk.request.processor = function(callback){
-		tk.requestProcessors.push(callback);
-	}
+        this.parent = parent1;
+        //	Resolve the selection set.
+        if (selection instanceof ToolkitSelection) {
+          this.set = selection.set.slice();
+        } else if (selection instanceof Element || selection instanceof Node || selection instanceof Window) {
+          this.set = [selection];
+        } else if (selection instanceof NodeList || selection instanceof Array) {
+          this.set = ToolkitSelection.clean(selection);
+        } else if (typeof selection === 'string') {
+          this.set = ToolkitSelection.tk.config.root.querySelectorAll(selection);
+        } else {
+          throw 'Illegal selection';
+        }
+        this.length = this.set.length;
+        this.empty = this.length === 0;
+      }
 
-	/* ---- Binding ---- */
-	function ElementPropertyBinding(parent, element){
-		var self = this;
-		this.parent = parent;
-		this.element = element;
-		this.started = false;
-		this.fns = {
-			reset: tk.fn.eatCall,
-			transform: tk.fn.identity,
-			placement: function(d, e){
-				e.html(d);
-			}
-		}
-	
-		this._applyChange = function(newValue){
-			if (!self.started){
-				self.fns.reset(newValue, self.element);
-				self.started = true;
-			}
-			self.fns.placement(self.fns.transform(newValue), self.element);
-		}
-	
-		this.reset = function(callback){
-			this.fns.reset = callback;
-			return this;
-		}
-	
-		this.transform = function(callback){
-			this.fns.transform = callback;
-			return this;
-		}
-	
-		this.placement = function(callback){
-			this.fns.placement = callback;
-			return this;
-		}
-	
-		this.and = function(){
-			parent.changed(this._applyChange);
-			return this.parent.and();
-		}
-	
-		this.begin = function(){
-			this.parent.changed(this._applyChange);
-			this.parent.begin();
-			return this.element;
-		}
-	}
-	
-	function PropertyBinding(host, property){
-		var self = this;
-		this.source = tk.varg(arguments, 2, null);
-		this.host = host;
-		this.property = property;
-		this.fns = {
-			callback: tk.fn.eatCall
-		};
-	
-		this._processChange = function(newValue){
-			return self.fns.callback(newValue);
-		}
-	
-		this._createListener = function(bindings, initialValue){
-			var value = initialValue;
-			return {
-				get: function(){
-					return value;
-				},
-				set: function(newValue){
-					tk.iter(bindings, function(b){
-						var x = b(newValue);
-						if (x !== undefined){
-							newValue = x;
-						}
-					});
-					value = newValue;
-				}
-			};
-		}
-	
-		this.changed = function(callback){
-			this.fns.callback = callback;
-			return this;
-		}
-	
-		this.onto = function(element){
-			return new ElementPropertyBinding(this, element);
-		}
-	
-		this.and = function(){
-			return new PropertyBinding(this.host, this.property, this);
-		}
-	
-		this.begin = function(){
-			if (this.source != null){
-				this.source.begin();
-			}
-			else {
-				//  Ensure bindings map exists.
-				if (!tk.prop(this.host, '__bindings__')){
-					this.host.__bindings__ = {};
-				}
-				
-				//  Ensure a list exists for this binding.
-				if (!tk.prop(this.host.__bindings__, property)){
-					//  Attach the listener.
-					this.host.__bindings__[property] = [];
-					var descriptor = this._createListener(this.host.__bindings__[property], this.host[property]);
-					Object.defineProperty(this.host, property, descriptor);
-				}
-			}
-	
-			//	Add the binding.
-			this.host.__bindings__[property].push(this._processChange);
-			
-			//	Apply initial.
-			this._processChange(this.host[property]);
-	
-			return this.element;
-		}
-	}
-	
-	function ElementArrayBinding(parent, element){
-		var self = this;
-		this.parent = parent;
-		this.element = element;
-		this.consts = {
-			tag: 'div'	//	TODO: Configure.
-		};
-		this.fns = {
-			removal: function(d, e, i){
-				e.remove();
-			},
-			transform: tk.fn.identity,
-			reset: function(d, e, i){
-				e.html('');
-			},
-			placement: function(d, e, i){
-				e.html(d);
-			}
-		};
-	
-		this.tag = function(tag){
-			this.consts.tag = tag;
-			return this;
-		}
-	
-		this._applyAdd = function(newValue, index){
-			var toAdd = tk.tag(self.consts.tag);
-			self.fns.placement(self.fns.transform(newValue), toAdd, index);
-			self.element.append(toAdd);
-		}
-	
-		this._applyRemove = function(value, index){
-			//	TODO: Better.
-			var toRemove = self.element.children(false).ith(index);
-			self.fns.removal(value, toRemove, index);
-		}
-	
-		this._applyChanged = function(value, index){
-			//	TODO: Better.
-			var target = self.element.children(false).ith(index);
-			self.fns.reset(value, target, index);
-			self.fns.placement(self.fns.transform(value), target, index);
-		}
-	
-		this.removal = function(callback){
-			this.fns.removal = callback;
-			return this;
-		}
-	
-		this.transform = function(callback){
-			this.fns.transform = callback;
-			return this;
-		}
-	
-		this.placement = function(callback){
-			this.fns.placement = callback;
-			return this;
-		}
-	
-		this.reset = function(callback){
-			this.fns.placement = callback;
-			return this;
-		}
-	
-		this.and = function(){
-			parent.changed(this._applyChanged);
-			parent.removed(this._applyRemove);
-			parent.added(this._applyAdd);
-			return this.parent.and();
-		}
-	
-		this.begin = function(){
-			parent.changed(this._applyChanged);
-			parent.removed(this._applyRemove);
-			parent.added(this._applyAdd);
-			this.parent.begin();
-			return this.element;
-		}
-	}
-	
-	function ArrayBinding(ary){
-		var self = this;
-		this.source = tk.varg(arguments, 1, null);
-		this.ary = ary;
-		this.fns = {
-			added: tk.fn.eatCall,
-			removed: tk.fn.eatCall,
-			changed: tk.fn.eatCall
-		}
-	
-		this._createListener = function(index, initialValue){
-			var value = initialValue;
-			return {
-				get: function(){
-					return value;
-				},
-				set: function(newValue){
-					var override = self.fns.changed(newValue, index);
-					value = real === undefined ? newValue : override;
-				},
-				configurable: true
-			};
-		}
-	
-		this._wrapIndicies = function(){
-			tk.iter(this.ary, function(v, i){
-				var descriptor = self._createListener(i, v);
-				Object.defineProperty(self.ary, i + '', descriptor);
-			});
-		}
-	
-		this.added = function(callback){
-			this.fns.added = callback;
-			return this;
-		}
-	
-		this.removed = function(callback){
-			this.fns.removed = callback;
-			return this;
-		}
-	
-		this.changed = function(callback){
-			this.fns.changed = callback;
-			return this;
-		}
-	
-		this.onto = function(element){
-			return new ElementArrayBinding(this, element);
-		}
-	
-		this.and = function(element){
-			return new ArrayBinding(this.ary, this);
-		}
-	
-		this.begin = function(){
-			if (this.source != null){
-				this.source.begin();
-			}
-	
-			//	Install listensers.
-			var innerPush = this.ary.push;
-			this.ary.push = function(){
-				for (var i = 0; i < arguments.length; i++){
-					self.fns.added(arguments[i], self.ary.length + i);
-				}
-				var returnValue = innerPush.apply(self.ary, arguments);
-				self._wrapIndicies();
-				return returnValue;
-			}
-	
-			var innerPop = this.ary.push;
-			this.ary.pop = function(){
-				var index = self.ary.length - 1;
-				self.fns.removed(self.ary[index], index);
-				var returnValue = innerPop.apply(self.ary);
-				self._wrapIndicies();
-				return returnValue;
-			}
-	
-			var innerSplice = this.ary.splice;
-			this.ary.splice = function(start, count){
-				for (var i = 0; i < count; i++){
-					var index = i + start;
-					self.fns.removed(self.ary[index], index);
-				}
-				var returnValue = innerSplice.apply(self.ary, [start, count]);
-				self._wrapIndicies();
-				return returnValue;
-			}
-	
-			//	Apply initial.
-			for (var i = 0; i < this.ary.length; i++){
-				self.fns.added(this.ary[i], i);
-			}
-			self._wrapIndicies();
-	
-			return this;
-		}
-	}
-	
-	tk.binding = function(host){
-		if (host instanceof Array){
-			return new ArrayBinding(host);
-		}
-		else {
-			var property = tk.varg(arguments, 1);
-			return new PropertyBinding(host, property);
-		}
-	}
-	tk.binding.on = function(host){
-		return function(property){
-			return tk.binding(host, property);
-		}
-	}
-	tk.binding.snap = function(rootElement, host, bindings){
-		switch (tk.typeCheck(host, Array, 'object')){
-			case 0:
-				if (typeof bindings == 'string'){
-					bindings = {add: bindings};
-				}
-	
-				var binding = tk.binding(host)
-					.onto(rootElement);
-				
-				if (tk.prop(bindings, 'add')){
-					binding.placement(function(d, e, i){
-						tk.snap(bindings.add, e, d, {
-							d: d,
-							i: i
-						});
-					});
-				}
-				binding.begin();
-	
-			case 1:
-				var binding = tk.binding.on(host);
-	
-				tk.iter(bindings, function(property, bound){
-					switch (tk.typeCheck(bound, 'string', 'function')){
-						case 0:
-							binding(property)
-								.onto(rootElement)
-									.placement(function(d, e, i){
-										tk.snap(bound, e, d, {
-											d: d,
-											i: i
-										});
-									})
-								.begin();
-							break;
-						case 1:
-							bound(binding(property)).begin();
-							break;
-					}
-				});
-				break;
-		}
-	}
-	
-	tk.unbound = function(arg){
-		switch(tk.typeCheck(arg, Array, 'object', 'any')){
-			case 0:
-				return tk.comprehension(arg, tk.unbound);
-			case 1:
-				if (arg === null){
-					return null;
-				}
-				var copy = {};
-				tk.iter(arg, function(key, value){
-					if (key.startsWith('__')){
-						return;
-					}
-					copy[key] = tk.unbound(value);
-				});
-				return copy;
-			case 2:
-				return arg;
-		}
-	}
-	
+      _createClass(ToolkitSelection, [{
+        key: 'back',
+        value: function back() {
+          if (!this.parent) {
+            throw 'Illegal back';
+          }
+          return this.parent;
+        }
+      }, {
+        key: 'ith',
+        value: function ith(i) {
+          var wrap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
-	if (/complete|loaded|interactive/.test(document.readyState)){
-		initCall();
-	}
-	else {
-		if (window){
-			window.addEventListener('DOMContentLoaded', initCall);
-		}
-	}
+          if (i < 0 || i > this.length) {
+            throw 'Out of bounds: ' + i;
+          }
+          if (wrap) {
+            return new ToolkitSelection(this.set[i], this);
+          } else {
+            return this.set[i];
+          }
+        }
+      }, {
+        key: 'first',
+        value: function first() {
+          var wrap = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
 
-	return tk;
-}
+          return this.ith(0, wrap);
+        }
+      }, {
+        key: 'reversed',
+        value: function reversed() {
+          var set;
+          set = this.set.slice();
+          set.reverse();
+          return new ToolkitSelection(set, this);
+        }
+      }, {
+        key: 'reduce',
+        value: function reduce(reducer) {
+          var set;
+          switch (typeof reducer === 'undefined' ? 'undefined' : _typeof(reducer)) {
+            case 'string':
+              set = this.compr(function (el) {
+                if (el.is(reducer)) {
+                  return el;
+                }
+              });
+              break;
+            case 'function':
+              set = this.compr(reducer);
+              break;
+            default:
+              throw 'Illegal reducer';
+          }
+          return new ToolkitSelection(set, this);
+        }
+      }, {
+        key: 'extend',
+        value: function extend(extension) {
+          var set;
+          if (extension instanceof ToolkitSelection) {
+            set = extension.set;
+          } else if (extension instanceof Array || extension instanceof NodeList) {
+            set = ToolkitSelection.clean(extension);
+          } else {
+            throw 'Illegal extension';
+          }
+          return new ToolkitSelection(this.set.concat(set, this));
+        }
+      }, {
+        key: 'parents',
+        value: function parents() {
+          var condition = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+          var high = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+          var checkElement, conditionType, set;
+          conditionType = ['string', 'function'].indexOf(typeof condition === 'undefined' ? 'undefined' : _typeof(condition));
+          if (conditionType < 0) {
+            throw 'Illegal condition';
+          }
+          checkElement = function checkElement(element, index) {
+            if (conditionType === 0) {
+              return e.is(condition);
+            } else {
+              return condition(element, index);
+            }
+          };
+          set = [];
+          this.iter(function (el, i) {
+            var parent;
+            parent = el.parentNode;
+            while (parent !== ToolkitSelection.tk.config.root) {
+              if (checkElement(parent, i)) {
+                set.push(parent);
+              }
+              if (!high) {
+                return;
+              }
+              parent = parent.parentNode;
+            }
+          });
+          return new ToolkitSelection(set, this);
+        }
+      }, {
+        key: 'children',
+        value: function children() {
+          var condition = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+          var deep = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+          var conditionType, fullSet;
+          conditionType = ['string', 'function'].indexOf(typeof condition === 'undefined' ? 'undefined' : _typeof(condition));
+          if (conditionType < 0) {
+            throw 'Illegal condition';
+          }
+          fullSet = [];
+          this.iter(function (el, i) {
+            var check, child, j, k, len, len1, ref, set, wrapped;
+            el = el.first(false);
+            if (el.nodeType === Node.TEXT_NODE) {
+              return;
+            }
+            set = [];
+            if (conditionType === 0) {
+              if (deep) {
+                set = el.querySelectorAll(condition);
+              } else {
+                ref = el.children;
+                for (j = 0, len = ref.length; j < len; j++) {
+                  child = ref[j];
+                  if (child.matches(condition)) {
+                    set = child;
+                  }
+                }
+              }
+            } else {
+              check = deep ? el.querySelectorAll('*') : el.children;
+              wrapped = new ToolkitSelection(check);
+              for (k = 0, len1 = check.length; k < len1; k++) {
+                child = check[k];
+                if (condition(wrap, i)) {
+                  set = child;
+                }
+              }
+            }
+            return fullSet = fullSet.concat(set);
+          });
+          return new ToolkitSelection(fullSet, this);
+        }
+      }, {
+        key: 'copy',
+        value: function copy() {
+          var copy;
+          copy = this.set[0].cloneNode(true);
+          return new ToolkitSelection(copy, this);
+        }
+
+        //	---- Iteration and comprehension ----
+
+      }, {
+        key: 'iter',
+        value: function iter(callback) {
+          var el, i, j, len, ref;
+          ref = this.set;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            el = ref[i];
+            el = new ToolkitSelection(el);
+            if (callback(el, i) === false) {
+              break;
+            }
+          }
+          return this;
+        }
+      }, {
+        key: 'compr',
+        value: function compr(callback) {
+          var el, i, j, len, ref, result, value;
+          result = [];
+          ref = this.set;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            el = ref[i];
+            el = new ToolkitSelection(el);
+            value = callback(el, i);
+            if (value !== void 0) {
+              result.push(value);
+            }
+          }
+          return result;
+        }
+      }, {
+        key: 'is',
+        value: function is(check) {
+          var checkType, el, i, j, len, ref;
+          checkType = ['string', 'function'].indexOf(typeof check === 'undefined' ? 'undefined' : _typeof(check));
+          ref = this.set;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            el = ref[i];
+            if (checkType === 0 && !e.matches(check)) {
+              return false;
+            } else if (checkType === 1 && !check(new ToolkitSelection(e), i)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }, {
+        key: 'classes',
+        value: function classes() {
+          var all, cls, el, i, j, k, len, len1, mine, ref;
+          all = [];
+          ref = this.set;
+          for (i = j = 0, len = ref.length; j < len; i = ++j) {
+            el = ref[i];
+            mine = el.className.split(/\s+/);
+            for (k = 0, len1 = mine.length; k < len1; k++) {
+              cls = mine[k];
+              if (indexOf.call(all, cls) < 0) {
+                all.push(cls);
+              }
+            }
+          }
+          return all;
+        }
+      }, {
+        key: 'value',
+        value: function value() {
+          var _value = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _sentinel;
+
+          if (_value === _sentinel) {
+            //	Get.
+            if (this.set[0].type === 'checkbox') {
+              return this.set[0].checked;
+            }
+            _value = this.set[0].value;
+            if (!_value) {
+              return null;
+            } else if (this.set[0].type === 'number') {
+              return +_value;
+            } else {
+              return _value;
+            }
+          } else {
+            //	Set.
+            this.iter(function (el) {
+              if (el.tag().toLowerCase() === 'select') {
+                return el.children('option').attr('selected', function (gl) {
+                  if (gl.attr('value' === _value)) {
+                    return true;
+                  } else {
+                    return null;
+                  }
+                });
+              } else {
+                return el.first(false).value = _value;
+              }
+            });
+          }
+          return this;
+        }
+      }, {
+        key: 'attr',
+        value: function attr(nameOrMap) {
+          var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _sentinel;
+
+          var el, j, len, ref;
+          if (typeof nameOrMap === 'string') {
+            if (value === _sentinel) {
+              //	Get.
+              return this.first().attr(nameOrMap);
+            } else {
+              ref = this.set;
+              //	Set.
+              for (j = 0, len = ref.length; j < len; j++) {
+                el = ref[j];
+                if (value === null) {
+                  el.removeAttribute(nameOrMap);
+                } else {
+                  el.setAttribute(nameOrMap, value);
+                }
+              }
+              return this;
+            }
+          } else if ((typeof nameOrMap === 'undefined' ? 'undefined' : _typeof(nameOrMap)) === 'object') {
+            this.iter(function (el) {
+              var key;
+              for (key in nameOrMap) {
+                value = nameOrMap[key];
+                el.attr(key, value);
+              }
+            });
+            return this;
+          } else {
+            throw 'Illegal argument';
+          }
+        }
+      }, {
+        key: 'css',
+        value: function css(propertyOrMap) {
+          var _this2 = this;
+
+          var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _sentinel;
+
+          var applyOne, name;
+          applyOne = function applyOne(name, value) {
+            name = name.replace(/-([a-z])/g, function (g) {
+              return g[1].toUpperCase();
+            });
+            return _this2.iter(function (el, i) {
+              var resolved;
+              resolved = ToolkitSelection.tk.resolve(value, el, i);
+              if (typeof resolved === 'number') {
+                resolved += 'px';
+              }
+              return el.set[0].style[name] = resolved;
+            });
+          };
+          if (typeof propertyOrMap === 'string') {
+            if (value === _sentinel) {
+              //	Get.
+              return window.getComputedStyle(this.set[0]).getPropertyValue(propertyOrMap);
+            } else {
+              applyOne(propertyOrMap, value);
+            }
+          } else if ((typeof propertyOrMap === 'undefined' ? 'undefined' : _typeof(propertyOrMap)) === 'object') {
+            for (name in propertyOrMap) {
+              value = propertyOrMap[name];
+              applyOne(name, value);
+            }
+          } else {
+            throw 'Illegal argument';
+          }
+          return this;
+        }
+      }, {
+        key: 'on',
+        value: function on(nameOrMap) {
+          var _this3 = this;
+
+          var _callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _sentinel;
+
+          var attachOne, j, key, len, ref, repr, value;
+          attachOne = function attachOne(name, value) {
+            return _this3.iter(function (el, i) {
+              var pure, repr;
+              pure = el.first(false);
+              if (!pure.__listeners__) {
+                pure.__listeners__ = [];
+              }
+              repr = {
+                event: ToolkitSelection.tk.resolve(event, el, i),
+                callback: function callback(g) {
+                  return _callback(el, g, i);
+                }
+              };
+              pure.__listeners__.push(repr);
+              return pure.addEventListener(repr.event, repr.callback);
+            });
+          };
+          if (typeof nameOrMap === 'string') {
+            if (_callback === _sentinel) {
+              //	Get.
+              if (pure.__listeners__ != null) {
+                ref = pure.__listeners__;
+                for (j = 0, len = ref.length; j < len; j++) {
+                  repr = ref[j];
+                  return repr.callback;
+                }
+              } else {
+                return [];
+              }
+            } else {
+              attachOne(nameOrMap, _callback);
+            }
+          } else if ((typeof nameOrMap === 'undefined' ? 'undefined' : _typeof(nameOrMap)) === 'object') {
+            for (key in nameOrMap) {
+              value = nameOrMap[key];
+              attachOne(name, value);
+            }
+          } else {
+            throw 'Illegal argument';
+          }
+          return this;
+        }
+      }, {
+        key: 'off',
+        value: function off(name) {
+          var el, j, k, len, len1, list, ref, repr;
+          ref = this.set;
+          for (j = 0, len = ref.length; j < len; j++) {
+            el = ref[j];
+            list = el.__listeners__ != null || [];
+            for (k = 0, len1 = list.length; k < len1; k++) {
+              repr = list[k];
+              if (repr.event === name) {
+                el.removeEventListener(repr.event, repr.callback);
+              }
+            }
+            el.__listeners__ = function () {
+              var l, len2, results;
+              results = [];
+              for (l = 0, len2 = list.length; l < len2; l++) {
+                repr = list[l];
+                if (repr.event !== name) {
+                  results.push(repr);
+                }
+              }
+              return results;
+            }();
+          }
+          return this;
+        }
+      }, {
+        key: 'classify',
+        value: function classify(classOrMap) {
+          var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+          var time = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _sentinel;
+
+          var _classifyOne, flag, name, ref;
+          _classifyOne = function classifyOne(name, flag, time) {
+            if (flag === 'toggle') {
+              //	Special second parameter case.
+              flag = function flag(el, i) {
+                return !e.is(selector);
+              };
+            }
+            return this.iter(function (el, i) {
+              var classes, flagValue, has, index, timeValue;
+              flagValue = ToolkitSelection.tk.resolve(flag, el, i);
+              classes = el.classes();
+              has = indexOf.call(classes, name) >= 0;
+              if (flagValue && !has) {
+                classes.push(name);
+              } else if (!flagValue && has) {
+                index = classes.indexOf(name);
+                classes.splice(index, 1);
+              }
+              el.set[0].className = classes.join(' ').trim();
+              if (time !== _sentinel) {
+                timeValue = ToolkitSelection.tk.resolve(time, el, i);
+                return ToolkitSelection.tk.timeout(timeValue, function (el) {
+                  return _classifyOne(name, !actualFlag, _sentinel);
+                });
+              }
+            });
+          };
+          if (typeof classOrMap === 'string') {
+            _classifyOne(classOrMap, value, time);
+          } else {
+            ref = this.classOrMap;
+            for (name in ref) {
+              flag = ref[name];
+              _classifyOne(name, flag);
+            }
+          }
+          return this;
+        }
+      }, {
+        key: 'remove',
+        value: function remove() {
+          var el, j, len, ref;
+          ref = this.set;
+          for (j = 0, len = ref.length; j < len; j++) {
+            el = ref[j];
+            if (el.parentNode !== null) {
+              el.parentNode.removeChild(el);
+            }
+          }
+          return this;
+        }
+      }, {
+        key: 'append',
+        value: function append(children) {
+          var child, inspected, j, len, ref;
+          children = new ToolkitSelection(children, this);
+          children.remove();
+          inspected = children.extend(children.children());
+          ToolkitSelection.tk.guts.inspect(inspected);
+          ref = children.set;
+          for (j = 0, len = ref.length; j < len; j++) {
+            child = ref[j];
+            this.set[0].appendChild(child);
+          }
+          return children;
+        }
+      }, {
+        key: 'prepend',
+        value: function prepend(children) {
+          var child, inspected, j, ref;
+          children = new ToolkitSelection(children, this);
+          children.remove();
+          inspected = children.extend(children.children());
+          ToolkitSelection.tk.guts.inspect(inspected);
+          ref = children.set;
+          for (j = ref.length - 1; j >= 0; j += -1) {
+            child = ref[j];
+            this.set[0].prepend(child);
+          }
+          return children;
+        }
+      }, {
+        key: 'replace',
+        value: function replace(newNode) {
+          if (newNode instanceof ToolkitSelection) {
+            newNode = newNode.first(false);
+          }
+          this.set[0].parentNode.replaceChild(newNode, this.set[0]);
+          return new ToolkitSelection(newNode, this.parent);
+        }
+      }, {
+        key: 'tag',
+        value: function tag() {
+          return this.set[0].tagName;
+        }
+      }, {
+        key: 'next',
+        value: function next() {
+          var node = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _sentinel;
+
+          var el, j, len, ref;
+          if (node === _sentinel) {
+            if (this.empty) {
+              return new ToolkitSelection([]);
+            }
+            return new ToolkitSelection(this.set[0].nextSibling, this);
+          } else {
+            if (!node instanceof ToolkitSelection) {
+              node = tk(node);
+            }
+            ref = node.set;
+            for (j = 0, len = ref.length; j < len; j++) {
+              el = ref[j];
+              this.set[0].parentNode.insertBefore(el, this.set[0].nextSibling);
+            }
+            node.parent = this;
+            return node;
+          }
+        }
+      }, {
+        key: 'prev',
+        value: function prev() {
+          var node = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _sentinel;
+
+          var el, j, ref;
+          if (node === _sentinel) {
+            if (this.empty) {
+              return new ToolkitSelection([]);
+            }
+            return new ToolkitSelection(this.set[0].prevSibling, this);
+          } else {
+            if (!node instanceof ToolkitSelection) {
+              node = tk(node);
+            }
+            ref = node.set;
+            for (j = ref.length - 1; j >= 0; j += -1) {
+              el = ref[j];
+              this.set[0].parentNode.insertBefore(el, this.set[0]);
+            }
+            node.parent = this;
+            return node;
+          }
+        }
+      }, {
+        key: 'html',
+        value: function html() {
+          var value = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _sentinel;
+
+          if (value === _sentinel) {
+            //	Get.
+            return this.set[0].innerHTML;
+          } else {
+            this.iter(function (el, i) {
+              return el.set[0].innerHTML = ToolkitSelection.tk.resolve(value, el, i);
+            });
+          }
+          return this;
+        }
+      }, {
+        key: 'text',
+        value: function text() {
+          var value = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _sentinel;
+
+          if (value === _sentinel) {
+            //	Get.
+            return this.set[0].textContent;
+          } else {
+            this.iter(function (el, i) {
+              return el.set[0].textContent = ToolkitSelection.tk.resolve(value, el, i);
+            });
+          }
+          return this;
+        }
+      }, {
+        key: 'select',
+        value: function select() {
+          this.set[0].select();
+          return this;
+        }
+      }, {
+        key: 'offset',
+        value: function offset() {
+          var toParent = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+          var el, o;
+          o = {
+            x: 0,
+            y: 0
+          };
+          el = this.set[0];
+          while (el) {
+            o.x += el.offsetLeft;
+            o.y += el.offsetRight;
+            if (toParent) {
+              break;
+            }
+            el = el.offsetParent;
+          }
+          return o;
+        }
+      }, {
+        key: 'size',
+        value: function size() {
+          var includeInner = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+          var box, el, size, style;
+          el = this.set[0];
+          box = el.getBoundingClientRect();
+          size = {
+            width: box.width,
+            height: box.height
+          };
+          if (includeInner) {
+            style = window.getComputedStyle(el, null);
+            size.width += style.getPropertyValue('margin-left');
+            size.width += style.getPropertyValue('margin-right');
+            size.height += style.getPropertyValue('margin-top');
+            size.height += style.getPropertyValue('margin-bottom');
+            if ('border-box' === style.getPropertyValue('box-sizing')) {
+              size.width += style.getPropertyValue('padding-left');
+              size.width += style.getPropertyValue('padding-right');
+              size.height += style.getPropertyValue('padding-top');
+              size.height += style.getPropertyValue('padding-bottom');
+            }
+          }
+          return size;
+        }
+      }]);
+
+      return ToolkitSelection;
+    }();
+
+    ;
+
+    ToolkitSelection.tk = null;
+
+    return ToolkitSelection;
+  }.call(this);
+
+  guts.attach(_SelectionModule = function _SelectionModule(tk) {
+    _classCallCheck(this, _SelectionModule);
+
+    tk.ToolkitSelection = ToolkitSelection;
+    ToolkitSelection.tk = tk;
+  });
+
+  ToolkitPListener = function () {
+    function ToolkitPListener(object, property1) {
+      _classCallCheck(this, ToolkitPListener);
+
+      var descriptor;
+      this.object = object;
+      this.property = property1;
+      //	Ensure tracking and property existance.
+      if (!this.object.__listeners__) {
+        this.object.__listeners__ = {};
+      }
+      if (!this.object.__listeners__[this.property]) {
+        this.object.__listeners__[this.property] = [];
+        descriptor = this._descriptor(this.object[this.property], this.object.__listeners__[this.property]);
+        Object.defineProperty(this.object, this.property, descriptor);
+      }
+
+      //	Add this listener.
+      this.object.__listeners__[this.property].push(this);
+      this._changed = function () {};
+      this._accessed = function () {};
+    }
+
+    _createClass(ToolkitPListener, [{
+      key: '_descriptor',
+      value: function _descriptor(initialValue, listeners) {
+        var value;
+        value = initialValue;
+        return {
+          get: function get() {
+            var j, len, listener;
+            for (j = 0, len = listeners.length; j < len; j++) {
+              listener = listeners[j];
+              listener._accessed(value);
+            }
+            return value;
+          },
+          set: function set(newValue) {
+            var j, len, listener;
+            if (value === newValue) {
+              return value;
+            }
+            value = newValue;
+            for (j = 0, len = listeners.length; j < len; j++) {
+              listener = listeners[j];
+              listener._changed(newValue);
+            }
+            return value;
+          }
+        };
+      }
+    }, {
+      key: 'changed',
+      value: function changed(callback) {
+        this._changed = callback;
+        //	Fire.
+        this.object[this.property] = this.object[this.property];
+        return this;
+      }
+    }, {
+      key: 'accessed',
+      value: function accessed(callback) {
+        this._accessed = callback;
+        return this;
+      }
+    }, {
+      key: 'remove',
+      value: function remove() {
+        var index;
+        index = this.object.__listeners__[this.property].indexOf(this);
+        this.object.__listeners__[this.property].splice(index, 1);
+        return this;
+      }
+    }]);
+
+    return ToolkitPListener;
+  }();
+
+  ToolkitAListener = function () {
+    function ToolkitAListener(array1) {
+      _classCallCheck(this, ToolkitAListener);
+
+      this.array = array1;
+      //	Ensure tracking.
+      if (!this.array.__listeners__) {
+        this._mixinListeners();
+      }
+      this.array.__listeners__.push(this);
+      this._added = function () {};
+      this._removed = function () {};
+      this._accessed = function () {};
+    }
+
+    _createClass(ToolkitAListener, [{
+      key: '_mixinListeners',
+      value: function _mixinListeners() {
+        var _this4 = this;
+
+        var innerPop, innerPush, innerSplice, listeners, updateIndicies;
+        listeners = this.array.__listeners__ = [];
+        updateIndicies = function updateIndicies() {
+          var descriptor, i, j, ref, results;
+          results = [];
+          for (i = j = 0, ref = _this4.array.length; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+            descriptor = _this4._indexDescriptor(_this4.array[i], i, listeners);
+            results.push(Object.defineProperty(_this4.array, i + '', descriptor));
+          }
+          return results;
+        };
+        innerPush = this.array.push;
+        this.array.push = function () {
+          for (var _len2 = arguments.length, items = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            items[_key2] = arguments[_key2];
+          }
+
+          var i, item, j, k, len, len1, listener, start;
+          start = _this4.array.length;
+          innerPush.apply(_this4.array, items);
+          updateIndicies();
+          for (i = j = 0, len = items.length; j < len; i = ++j) {
+            item = items[i];
+            for (k = 0, len1 = listeners.length; k < len1; k++) {
+              listener = listeners[k];
+              listener._added(item, start + i);
+            }
+          }
+          return _this4.array.length;
+        };
+        innerPop = this.array.pop;
+        this.array.pop = function () {
+          var index, j, len, listener, removed;
+          removed = _this4.array[index = _this4.array.length - 1];
+          innerPop.apply(_this4.array);
+          updateIndicies();
+          for (j = 0, len = listeners.length; j < len; j++) {
+            listener = listeners[j];
+            listener._removed(removed, index);
+          }
+          return removed;
+        };
+        innerSplice = this.array.splice;
+        return this.array.splice = function (start, count) {
+          for (var _len3 = arguments.length, items = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+            items[_key3 - 2] = arguments[_key3];
+          }
+
+          var i, j, k, l, len, len1, listener, m, ref, ref1, removed, result;
+          removed = function () {
+            var j, ref, ref1, results;
+            results = [];
+            for (i = j = ref = start, ref1 = start + count; ref <= ref1 ? j < ref1 : j > ref1; i = ref <= ref1 ? ++j : --j) {
+              results.push(this.array[i]);
+            }
+            return results;
+          }.call(_this4);
+          result = innerSplice.apply(_this4.array, [start, count].concat(items));
+          updateIndicies();
+          for (i = j = 0, ref = count; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+            for (k = 0, len = listeners.length; k < len; k++) {
+              listener = listeners[k];
+              listener._removed(removed[i], start + i);
+            }
+          }
+          for (i = l = 0, ref1 = items.length; 0 <= ref1 ? l < ref1 : l > ref1; i = 0 <= ref1 ? ++l : --l) {
+            for (m = 0, len1 = listeners.length; m < len1; m++) {
+              listener = listeners[m];
+              listener._added(_this4.array[start + i], i);
+            }
+          }
+          return result;
+        };
+      }
+    }, {
+      key: '_indexDescriptor',
+      value: function _indexDescriptor(initialValue, index, listeners) {
+        var value;
+        value = initialValue;
+        return {
+          get: function get() {
+            var listener;
+            (function () {
+              var j, len, results;
+              results = [];
+              for (j = 0, len = listeners.length; j < len; j++) {
+                listener = listeners[j];
+                results.push(listener._accessed(value));
+              }
+              return results;
+            })();
+            return value;
+          },
+          set: function set(newValue) {
+            var j, k, len, len1, listener;
+            if (value === newValue) {
+              return value;
+            }
+            value = newValue;
+            for (j = 0, len = listeners.length; j < len; j++) {
+              listener = listeners[j];
+              listener._removed(value, index);
+            }
+            for (k = 0, len1 = listeners.length; k < len1; k++) {
+              listener = listeners[k];
+              listener._added(newValue, index);
+            }
+            return value;
+          },
+          configurable: true
+        };
+      }
+    }, {
+      key: 'added',
+      value: function added(callback) {
+        var index, item, j, len, ref;
+        this._added = callback;
+        ref = this.array;
+        for (index = j = 0, len = ref.length; j < len; index = ++j) {
+          item = ref[index];
+          callback(item, index);
+        }
+        return this;
+      }
+    }, {
+      key: 'removed',
+      value: function removed(callback) {
+        this._removed = callback;
+        return this;
+      }
+    }, {
+      key: 'accessed',
+      value: function accessed(callback) {
+        this._accessed = callback;
+        return this;
+      }
+    }]);
+
+    return ToolkitAListener;
+  }();
+
+  guts.attach(callable(_Listeners = function () {
+    function _Listeners() {
+      _classCallCheck(this, _Listeners);
+
+      this.called = 'listener';
+    }
+
+    _createClass(_Listeners, [{
+      key: '_call',
+      value: function _call(objectOrArray) {
+        var property = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _sentinel;
+
+        if (objectOrArray instanceof Array) {
+          return new ToolkitAListener(objectOrArray);
+        } else if ((typeof objectOrArray === 'undefined' ? 'undefined' : _typeof(objectOrArray)) === 'object') {
+          return new ToolkitPListener(objectOrArray, property);
+        }
+        throw 'Invalid parameter';
+      }
+    }]);
+
+    return _Listeners;
+  }()));
+
+  ToolkitTemplate = function () {
+    function ToolkitTemplate(tk1, definition1) {
+      _classCallCheck(this, ToolkitTemplate);
+
+      this.tk = tk1;
+      this.definition = definition1;
+      this._source = null;
+    }
+
+    _createClass(ToolkitTemplate, [{
+      key: 'source',
+      value: function source(_source) {
+        this._source = _source;
+        return this;
+      }
+
+      //	Realize a virtual node (as a DOM node).
+
+    }, {
+      key: '_realize',
+      value: function _realize(virtual) {
+        var child, item, j, len, ref, result;
+        if (!virtual) {
+          return document.createTextNode('');
+        }
+        if (typeof virtual === 'string') {
+          result = tk(document.createTextNode(virtual));
+        } else if (typeof virtual === 'function') {
+          result = this._realize(virtual());
+        } else if (virtual instanceof Array) {
+          result = function () {
+            var j, len, results;
+            results = [];
+            for (j = 0, len = virtual.length; j < len; j++) {
+              item = virtual[j];
+              results.push(this._realize(item));
+            }
+            return results;
+          }.call(this);
+        } else {
+          result = tk.tag(virtual.tag).attr(virtual.attributes);
+          ref = virtual.children;
+          for (j = 0, len = ref.length; j < len; j++) {
+            child = ref[j];
+            result.append(this._realize(child));
+          }
+        }
+        return result;
+      }
+    }, {
+      key: 'render',
+      value: function render() {
+        var _this5 = this;
+
+        var inserts, nodes;
+        if (this._source instanceof Array) {
+          inserts = false;
+          nodes = [];
+          this.tk.listener(this._source).added(function (item, index) {
+            var changed, dom, property, value;
+            //	Create DOM.
+            dom = _this5._realize(_this5.definition(item));
+            changed = function changed() {
+              var newDom;
+              newDom = _this5._realize(_this5.definition(item));
+              if (inserts) {
+                nodes[nodes.indexOf(dom)] = newDom;
+                return dom = dom.replace(newDom);
+              }
+            };
+            for (property in item) {
+              value = item[property];
+              if (value instanceof Array) {
+                _this5.tk.listener(value).added(changed).removed(changed);
+              }
+              _this5.tk.listener(item, property).changed(changed);
+            }
+            //	Insert.
+            nodes.splice(index, 0, dom);
+            if (inserts) {
+              if (index === 0) {
+                return nodes[1].prev(dom);
+              } else {
+                return nodes[index - 1].next(dom);
+              }
+            }
+          }).removed(function (item, index) {
+            nodes[index].remove();
+            return nodes.splice(index, 1);
+          });
+          inserts = true;
+          return tk(nodes);
+        } else {
+          return realizeOne(this._source).node;
+        }
+      }
+    }]);
+
+    return ToolkitTemplate;
+  }();
+
+  guts.attach(callable(_Templates = function () {
+    function _Templates() {
+      _classCallCheck(this, _Templates);
+
+      this.called = 'template';
+    }
+
+    _createClass(_Templates, [{
+      key: '_call',
+      value: function _call(definition) {
+        return new ToolkitTemplate(this, definition);
+      }
+    }, {
+      key: 'tag',
+      value: function tag(_tag, attributes) {
+        for (var _len4 = arguments.length, children = Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
+          children[_key4 - 2] = arguments[_key4];
+        }
+
+        return {
+          tag: _tag,
+          attributes: attributes || {},
+          children: children
+        };
+      }
+    }]);
+
+    return _Templates;
+  }()));
+
+  Toolkit = callable(_Toolkit = function () {
+    function _Toolkit() {
+      var _this6 = this;
+
+      _classCallCheck(this, _Toolkit);
+
+      //	Define the 'here' debug helper.
+      Object.defineProperty(this, 'here', {
+        get: function get() {
+          return _this6.log('here');
+        }
+      });
+    }
+
+    _createClass(_Toolkit, [{
+      key: '_call',
+      value: function _call(selection) {
+        return new ToolkitSelection(selection);
+      }
+    }, {
+      key: '_finalize',
+      value: function _finalize(config) {
+        var _this7 = this;
+
+        var ref, ref1;
+        //	Read config.
+        this.config = {
+          root: (ref = config.root) != null ? ref : typeof document !== "undefined" && document !== null ? document : null,
+          debug: (ref1 = config.debug) != null ? ref1 : false
+        };
+
+        //	Create guts.
+        this.guts = guts.onto(this);
+        //	Prepare initialization.
+        if (/complete|loaded|interactive/.test(typeof document !== "undefined" && document !== null ? document.readyState : void 0)) {
+          this.guts.init();
+        } else if (typeof window !== "undefined" && window !== null) {
+          window.addEventListener('DOMContentLoaded', function () {
+            return _this7.guts.init();
+          });
+        }
+      }
+
+      //	Initialization callback registery.
+
+    }, {
+      key: 'init',
+      value: function init(callback) {
+        this.guts.initFunctions.push(callback);
+        return this;
+      }
+
+      //	Element inspection registery.
+
+    }, {
+      key: 'inspection',
+      value: function inspection(callback) {
+        this.guts.inspectionFunctions.push(callback);
+        return this;
+      }
+
+      //	Logging.
+
+    }, {
+      key: 'log',
+      value: function log() {
+        var ref;
+
+        for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+          args[_key5] = arguments[_key5];
+        }
+
+        if ((ref = this.config) != null ? ref.debug : void 0) {
+          console.log.apply(null, args);
+        }
+        return args[0];
+      }
+
+      //	Function name retrieval.
+
+    }, {
+      key: 'nameOf',
+      value: function nameOf(func) {
+        var ref;
+        return (/^function\s+([\w\$]+)\s*\(/.exec((ref = func.toString()) != null ? ref : '<anonymous function>')
+        );
+      }
+
+      //	Resolve a potentially functional parameter.
+      //	DEPRICATED
+
+    }, {
+      key: 'resolve',
+      value: function resolve(thing) {
+        if (typeof thing !== 'function') {
+          return thing;
+        } else {
+          for (var _len6 = arguments.length, args = Array(_len6 > 1 ? _len6 - 1 : 0), _key6 = 1; _key6 < _len6; _key6++) {
+            args[_key6 - 1] = arguments[_key6];
+          }
+
+          return thing.apply(null, args);
+        }
+      }
+
+      //	Current time in milliseconds.
+
+    }, {
+      key: 'time',
+      value: function time() {
+        return new Date().getTime();
+      }
+
+      //	Numerical range generation.
+
+    }, {
+      key: 'range',
+      value: function range(max) {
+        var realMax = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+        var i, j, min, ref, ref1, results;
+        //	Parse var-args.
+        min = 0;
+        if (realMax) {
+          min = max;
+          max = realMax;
+        }
+        results = [];
+        for (i = j = ref = min, ref1 = max; ref <= ref1 ? j < ref1 : j > ref1; i = ref <= ref1 ? ++j : --j) {
+          results.push(i);
+        }
+        return results;
+      }
+
+      //	Iteration.
+
+    }, {
+      key: 'iter',
+      value: function iter(iterable, callback) {
+        var i, item, j, len, name, value;
+        if (iterable instanceof Array) {
+          for (i = j = 0, len = iterable.length; j < len; i = ++j) {
+            item = iterable[i];
+            callback(item, i);
+          }
+        } else if ((typeof iterable === 'undefined' ? 'undefined' : _typeof(iterable)) === 'object') {
+          for (name in iterable) {
+            value = iterable[name];
+            callback(name, value);
+          }
+        } else {
+          throw 'Not iterable: ' + iterable;
+        }
+      }
+
+      //	Comprehension.
+
+    }, {
+      key: 'compr',
+      value: function compr(array, callback) {
+        var i, item, j, len, result, returned;
+        result = [];
+        for (i = j = 0, len = array.length; j < len; i = ++j) {
+          item = array[i];
+          returned = callback(item, i);
+          if (returned != null) {
+            result.push(returned);
+          }
+        }
+        return returned;
+      }
+    }, {
+      key: 'tag',
+      value: function tag(tagName) {
+        var attributes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var children = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+
+        var child, el, j, key, len, value;
+        el = document.createElement(tagName);
+        for (key in attributes) {
+          value = attributes[key];
+          el.setAttribute(key, value);
+        }
+        for (j = 0, len = children.length; j < len; j++) {
+          child = children[j];
+          el.appendChild(this.tag(child));
+        }
+        return new ToolkitSelection(el);
+      }
+    }]);
+
+    return _Toolkit;
+  }());
+
+  //	Export either to the window or as a module, depending on context.
+  toolkit = {
+    create: function create() {
+      var config = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+      var tk;
+      tk = new Toolkit();
+      tk._finalize(config);
+      return tk;
+    }
+  };
+
+  if (typeof window !== "undefined" && window !== null) {
+    window.toolkit = toolkit;
+  } else {
+    module.exports = toolkit;
+  }
+}).call(undefined);

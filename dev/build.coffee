@@ -4,10 +4,10 @@ coffee = require 'coffeescript'
 babel = require 'babel-core'
 
 compileWithIncludes = (filename) ->
-	contents = fs.readFileSync 'new_src/' + filename + '.coffee', 'utf-8'
+	contents = fs.readFileSync 'src/' + filename + '.coffee', 'utf-8'
 
 	contents = contents.replace /#\s+::include\s+(.+)\s*?\n/g, (match, includeFilename) ->
-		fs.readFileSync 'new_src/' + includeFilename + '.coffee', 'utf-8'
+		fs.readFileSync 'src/' + includeFilename + '.coffee', 'utf-8'
 
 	transpileOpts = 
 		presets: ['es2015']
@@ -15,5 +15,11 @@ compileWithIncludes = (filename) ->
 	result = babel.transform compiled, transpileOpts
 	result.code
 
-fs.writeFileSync 'toolkit.new.js', compileWithIncludes 'toolkit'
+fs.writeFileSync 'toolkit.js', compileWithIncludes 'toolkit'
 console.log 'Compiled'
+
+minifyOpts =
+	host: 'https://javascript-minifier.com'
+	path: '/raw'
+	method: 'POST'
+#	TODO: Minify req.

@@ -304,9 +304,39 @@ class ToolkitSelection
 		@set[0].prepend child for child in children.set by -1
 		children
 
+	replace: (newNode) ->
+		if newNode instanceof ToolkitSelection
+			newNode = newNode.first false
+		@set[0].parentNode.replaceChild newNode, @set[0]
+		new ToolkitSelection newNode, @parent
+
 	tag: () -> @set[0].tagName
-	next: () -> new ToolkitSelection @set[0]?.nextElementSibling, @
-	prev: () -> new ToolkitSelection @set[0]?.prevElementSibling, @
+
+	next: (node=_sentinel) ->
+		if node == _sentinel
+			if @empty
+				return new ToolkitSelection []
+			new ToolkitSelection @set[0].nextSibling, @
+		else
+			if not node instanceof ToolkitSelection
+				node = tk node
+			for el in node.set
+				@set[0].parentNode.insertBefore el, @set[0].nextSibling
+			node.parent = @
+			node
+
+	prev: (node=_sentinel) -> 
+		if node == _sentinel
+			if @empty
+				return new ToolkitSelection []
+			new ToolkitSelection @set[0].prevSibling, @
+		else
+			if not node instanceof ToolkitSelection
+				node = tk node
+			for el in node.set by -1
+				@set[0].parentNode.insertBefore el, @set[0]
+			node.parent = @
+			node
 
 	html: (value=_sentinel) ->
 		if value == _sentinel

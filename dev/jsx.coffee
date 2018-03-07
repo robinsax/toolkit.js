@@ -1,26 +1,37 @@
 window.tk = toolkit.create
 	debug: true
 
-data = [
+window.posts = [
 	{
-		name: 'thing 1',
-		content: 'thing 2'
+		title: 'Wikid sweet templates',
+		content: 'pretty average actually',
+		comments: [
+			'yes.'
+		]
 	},
 	{
-		name: 'thing n',
-		content: 'blah blah blah'
+		title: 'foobar',
+		content: 'the is the content I suppose',
+		comments: []
 	}
 ]
 
 tk.init () ->
-	createDOM = (item) ->
-		<article class="thing">
-			<h1>{ item.name }</h1>
-			<p>{ item.content.toUpperCase() }</p>
-		</article>
-
-	el = tk.virtual createDOM
-		.data data
+	el = tk.template (item) ->
+			<article class="post">
+				<h1>{ 'A post: ' + item.title.toUpperCase() }</h1>
+				{ if -1 != item.content.indexOf 'darn' 
+					<em style="color: red">This post contains swears!</em> }
+				<p>{ item.content.replace 'darn', 'd***' }</p>
+				{ if item.comments.length == 0 
+					<em style="font-size: 9pt">No comments yet</em> 
+				else 
+					<ul>
+						{<li>{ comment }</li> for comment in item.comments }
+					</ul>
+				}
+			</article>
+		.source posts
 		.render()
 
 	tk 'body'

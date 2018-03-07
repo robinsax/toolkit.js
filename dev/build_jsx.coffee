@@ -7,7 +7,7 @@ opts =
 	plugins: [
 		[
 			'transform-react-jsx',
-				pragma: 'tk.virtual.tag'
+				pragma: 'tk.template.tag'
 		]
 	]
 

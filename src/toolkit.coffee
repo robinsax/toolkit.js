@@ -5,8 +5,8 @@ callable = (Class) ->
 		#	Create an instance.
 		inst = new Class
 		#	Create a function that invokes _call()
-		func = () ->
-			inst._call.apply @, arguments
+		func = (...args) ->
+			inst._call.apply @, args
 		
 		#	Copy the properties of the instance onto the function.
 		obj = inst
@@ -56,7 +56,8 @@ guts = new ToolkitGuts
 
 #	::include requests
 #	::include selection
-#	::include virtual
+#	::include listeners
+#	::include templates
 
 Toolkit = callable class _Toolkit
 	constructor: () ->
@@ -104,8 +105,9 @@ Toolkit = callable class _Toolkit
 	#	Function name retrieval.
 	nameOf: (func) ->
 		/^function\s+([\w\$]+)\s*\(/.exec func.toString() ? '<anonymous function>'
-	
+
 	#	Resolve a potentially functional parameter.
+	#	DEPRICATED
 	resolve: (thing, ...args) ->
 		if typeof thing != 'function' then thing else thing.apply null, args
 
@@ -125,11 +127,12 @@ Toolkit = callable class _Toolkit
 	#	Iteration.
 	iter: (iterable, callback) ->
 		if iterable instanceof Array
-			callback item, i for item, i in interable
+			(callback item, i) for item, i in iterable
 		else if typeof iterable == 'object'
-			callback name, value for name, value of iterable
+			(callback name, value) for name, value of iterable
 		else
 			throw 'Not iterable: ' + iterable
+		return
 
 	#	Comprehension.
 	compr: (array, callback) ->
@@ -142,11 +145,11 @@ Toolkit = callable class _Toolkit
 	
 	tag: (tagName, attributes={}, children=[]) ->
 		el = document.createElement(tagName)
-		el.setAttribute key, value for key, value of attributes
-		el.appendChild @tag child for child in children
+		(el.setAttribute key, value) for key, value of attributes
+		(el.appendChild @tag child) for child in children
 		new ToolkitSelection el
 
-#	Export either to the window or as a module, depending on context.s
+#	Export either to the window or as a module, depending on context.
 toolkit = 
 	create: (config={}) ->
 		tk = new Toolkit
