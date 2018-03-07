@@ -12,7 +12,11 @@ callable = (Class) ->
 		obj = inst
 		while true
 			names = Object.getOwnPropertyNames obj
-			func[name] = inst[name] for name in names
+			for name in names
+				if typeof obj[name] == 'function'
+					func[name] = obj[name]
+				else
+					Object.defineProperty func, name, Object.getOwnPropertyDescriptor obj, name 
 			if not (obj = Object.getPrototypeOf obj)
 				break
 		
@@ -22,17 +26,21 @@ callable = (Class) ->
 #	The protected internals of the base Toolkit instance. Nothing within this
 #	object should be considered exposed.
 class ToolkitGuts
-	contructor: () ->
+	constructor: () ->
 		@initFunctions = []
 		@inspectionFunctions = []
 		@modules = []
+		return
 
 	attach: (Module) ->
-		@Modules.push module
+		@modules.push Module
 		@
 
 	onto: (tk) ->
-		tk[Module.name] = new Module @ for Module in @Modules
+		for Module in @modules
+			inst = new Module tk
+			if inst.called
+				tk[inst.called] = inst
 		@
 
 	init: () ->
@@ -42,33 +50,40 @@ class ToolkitGuts
 	inspect: (check) ->
 		f(check) for f in @inspectionFunctions
 		@
-#	Create the guts.	
+
+#	Create the guts.
 guts = new ToolkitGuts
 
 #	::include requests
+#	::include selection
+#	::include virtual
 
 Toolkit = callable class _Toolkit
-	constructor: (config) ->
-		#	Create guts.
-		@guts = guts.onto @
-
-		#	Read config.
-		@debug = config.debug ? false
-
+	constructor: () ->
 		#	Define the 'here' debug helper.
 		Object.defineProperty @, 'here',
 			get: () =>
 				@log 'here'
 
+	_call: (selection) ->
+		new ToolkitSelection selection
+
+	_finalize: (config) ->
+		#	Read config.
+		@config =
+			root: config.root ? (document ? null)
+			debug: config.debug ? false
+		
+		#	Create guts.
+		@guts = guts.onto @
+
 		#	Prepare initialization.
 		if /complete|loaded|interactive/.test document?.readyState
 			@guts.init()
 		else if window?
-			window.addEventListender 'DOMContentLoaded', () =>
+			window.addEventListener 'DOMContentLoaded', () =>
 				@guts.init()
-
-	_call: (selection) ->
-		new ToolkitSelection selection
+		return
 
 	#	Initialization callback registery.
 	init: (callback) ->
@@ -82,7 +97,7 @@ Toolkit = callable class _Toolkit
 
 	#	Logging.
 	log: (...args) ->
-		if @debug
+		if @config?.debug
 			console.log.apply null, args
 		args[0]
 
@@ -124,11 +139,19 @@ Toolkit = callable class _Toolkit
 			if returned?
 				result.push returned
 		returned
+	
+	tag: (tagName, attributes={}, children=[]) ->
+		el = document.createElement(tagName)
+		el.setAttribute key, value for key, value of attributes
+		el.appendChild @tag child for child in children
+		new ToolkitSelection el
 
 #	Export either to the window or as a module, depending on context.s
 toolkit = 
 	create: (config={}) ->
-		new Toolkit config
+		tk = new Toolkit
+		tk._finalize(config)
+		tk
 if window?
 	window.toolkit = toolkit
 else

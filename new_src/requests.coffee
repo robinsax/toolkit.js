@@ -1,7 +1,5 @@
-class Request
-	@tk: null
-	
-	constructor: (method, url) ->
+class Request	
+	constructor: (@tk, method, url) ->
 		@info =
 			method: method
 			url: url
@@ -21,7 +19,7 @@ class Request
 
 	json: (data) ->
 		@info.headers['Content-Type'] = 'application/json'
-		@info.body = Request.tk.unbound data
+		@info.body = @tk.unbound data
 		@
 	
 	data: (data, mimetype='text/plain') ->
@@ -48,7 +46,7 @@ class Request
 				when 'application/json'
 					data = JSON.parse data
 			
-			Request.tk.log 'Recieved ' + status + ' (' + @info.method + ', ' + @info.url ')'
+			@tk.log 'Recieved ' + status + ' (' + @info.method + ', ' + @info.url + ')'
 			(if status < 400 then @info.success else @info.failure)(data, status)
 		
 		#	Prepare data.
@@ -78,13 +76,11 @@ class Request
 		xhr.setRequestHeader key, value for key, value of @info.headers
 		xhr.send serializedBody
 
-		Request.tk.log 'Sent (' + @info.method + ', ' + @info.url + ')', @info.body
+		@tk.log 'Sent (' + @info.method + ', ' + @info.url + ')', @info.body
 
-guts.attach callable class RequestModule
-	@name: 'request'
-
-	constructor: (tk) ->
-		Request.tk = tk
+guts.attach callable class _RequestModule
+	constructor: (@tk) ->
+		@called = 'request'
 
 	_call: (method, url) ->
-		new Request method, url
+		new Request @, method, url

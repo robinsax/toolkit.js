@@ -12,15 +12,15 @@ class ToolkitSelection
 	constructor: (selection, @parent) ->
 		#	Resolve the selection set.
 		if selection instanceof ToolkitSelection
-			@set = selection.set.splice()
-		else if selection instanceof Element or selection instanceof Window
+			@set = selection.set.slice()
+		else if selection instanceof Element or selection instanceof Node or selection instanceof Window
 			@set = [selection]
 		else if selection instanceof NodeList or selection instanceof Array
 			@set = ToolkitSelection.clean selection
 		else if typeof selection == 'string'
-			@set = tk.config.root.querySelectorAll selection
+			@set = ToolkitSelection.tk.config.root.querySelectorAll selection
 		else
-			throw 'Illegal exception'
+			throw 'Illegal selection'
 	
 		@length = @set.length
 		@empty = @length == 0
@@ -33,7 +33,7 @@ class ToolkitSelection
 	ith: (i, wrap=true) ->
 		if i < 0 or i > @length
 			throw 'Out of bounds: ' + i
-		new ToolkitSelection @set[i], @ if wrap else @set[i]
+		if wrap then new ToolkitSelection @set[i], @ else @set[i]
 	
 	first: (wrap=true) ->
 		@ith(0, wrap)
@@ -88,7 +88,9 @@ class ToolkitSelection
 
 		fullSet = []
 		@iter (el, i) ->
-			el = el.first()
+			el = el.first false
+			if el.nodeType == Node.TEXT_NODE
+				return
 			set = []
 			if conditionType == 0
 				if deep 
@@ -97,7 +99,8 @@ class ToolkitSelection
 					set = child for child in el.children when child.matches condition
 			else
 				check = if deep then el.querySelectorAll '*' else el.children
-				set = child for child in check when condition (new ToolkitSelection check), i)
+				wrapped = new ToolkitSelection check
+				set = child for child in check when condition wrap, i
 			fullSet = fullSet.concat(set)
 		
 		new ToolkitSelection fullSet, @
@@ -177,13 +180,15 @@ class ToolkitSelection
 						el.removeAttribute(nameOrMap)
 					else
 						el.setAttribute(nameOrMap, value)
+				@
 		else if typeof nameOrMap == 'object'
 			@iter (el) ->
-				for key, value of @nameOrMap
+				for key, value of nameOrMap
 					el.attr key, value
+				return
+			@
 		else
 			throw 'Illegal argument'
-		@
 
 	css: (propertyOrMap, value=_sentinel) ->
 		applyOne = (name, value) =>
@@ -356,4 +361,15 @@ class ToolkitSelection
 			size.height += style.getPropertyValue 'margin-bottom'
 
 			if 'border-box' == style.getPropertyValue 'box-sizing'
-				
+				size.width += style.getPropertyValue 'padding-left'
+				size.width += style.getPropertyValue 'padding-right'
+
+				size.height += style.getPropertyValue 'padding-top'
+				size.height += style.getPropertyValue 'padding-bottom'
+		
+		size
+
+guts.attach class _SelectionModule
+	constructor: (tk) ->
+		tk.ToolkitSelection = ToolkitSelection
+		ToolkitSelection.tk = tk

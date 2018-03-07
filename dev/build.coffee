@@ -1,4 +1,5 @@
 fs = require 'fs'
+http = require 'http'
 coffee = require 'coffeescript'
 babel = require 'babel-core'
 
@@ -15,4 +16,4 @@ compileWithIncludes = (filename) ->
 	result.code
 
 fs.writeFileSync 'toolkit.new.js', compileWithIncludes 'toolkit'
-console.log 'Done'
+console.log 'Compiled'
