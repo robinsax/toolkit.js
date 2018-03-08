@@ -8,4 +8,4 @@ before_script:
   - cat required_packages | xargs npm install
 script:
   - coffee build.coffee
-  - coffee ./tests.run
+  - coffee ./tests/run.coffee
