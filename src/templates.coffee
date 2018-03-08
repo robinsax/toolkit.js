@@ -12,13 +12,13 @@ class ToolkitTemplate
 			return document.createTextNode ''
 
 		if typeof virtual == 'string'
-			result = tk document.createTextNode virtual
+			result = document.createTextNode virtual
 		else if typeof virtual == 'function'
 			result = @_realize virtual()
 		else if virtual instanceof Array
 			result = (@_realize item for item in virtual)
 		else
-			result = tk.tag virtual.tag
+			result = @tk.tag virtual.tag
 				.attr virtual.attributes
 			result.append @_realize child for child in virtual.children
 
@@ -33,10 +33,11 @@ class ToolkitTemplate
 					#	Create DOM.
 					dom = @_realize @definition item
 					changed = () =>
+						if not inserts
+							return
 						newDom = @_realize @definition item
-						if inserts
-							nodes[nodes.indexOf dom] = newDom
-							dom = dom.replace newDom 
+						nodes[nodes.indexOf dom] = newDom
+						dom = dom.replace newDom 
 
 					for property, value of item
 						if value instanceof Array
@@ -44,7 +45,7 @@ class ToolkitTemplate
 								.added changed
 								.removed changed
 						@tk.listener item, property
-							.changed changed
+							.changed changed, false
 
 					#	Insert.
 					nodes.splice index, 0, dom
@@ -59,7 +60,7 @@ class ToolkitTemplate
 					nodes.splice index, 1
 
 			inserts = yes
-			return tk nodes
+			return @tk nodes
 		else
 			return (realizeOne @_source).node
 

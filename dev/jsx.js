@@ -16,8 +16,8 @@
   }];
 
   tk.init(function () {
-    var el;
-    el = tk.template(function (item) {
+    var el, template;
+    template = function template(item) {
       var comment;
       return tk.template.tag(
         'article',
@@ -60,7 +60,8 @@
           }()
         )
       );
-    }).source(posts).render();
+    };
+    el = tk.template(template).source(posts).render();
     return tk('body').append(el);
   });
 }).call(undefined);

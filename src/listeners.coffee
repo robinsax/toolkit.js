@@ -29,10 +29,10 @@ class ToolkitPListener
 				(listener._changed newValue) for listener in listeners
 				value
 
-	changed: (callback) ->
+	changed: (callback, initial=true) ->
 		@_changed = callback
 		#	Fire.
-		@object[@property] = @object[@property]
+		callback @object[@property] if initial
 		@
 
 	accessed: (callback) ->

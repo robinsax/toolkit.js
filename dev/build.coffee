@@ -13,7 +13,7 @@ compileWithIncludes = (filename) ->
 		presets: ['es2015']
 	compiled = coffee.compile contents
 	result = babel.transform compiled, transpileOpts
-	(ugly.minify result.code).code
+	result.code
 
 header = '''/*
 	toolkit.js
@@ -24,5 +24,9 @@ header = '''/*
 
 '''
 
-fs.writeFileSync 'toolkit.min.js', header + compileWithIncludes 'toolkit'
-console.log 'Compiled'
+es5 = compileWithIncludes 'toolkit'
+
+fs.writeFileSync 'toolkit.js', header + es5
+
+fs.writeFileSync 'toolkit.min.js', header + (ugly.minify es5).code 
+console.log 'Minified'
