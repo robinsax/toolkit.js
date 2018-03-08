@@ -1,5 +1,7 @@
 # toolkit.js
 
+[![Build status](https://travis-ci.org/robinsax/toolkit.js.svg?branch=master)](https://travis-ci.org/robinsax/toolkit.js)
+
 toolkit.js is an experimental JavaScript library tooled to support DOM manipulation and inspection,
 AJAX, object and array reflection, and JSX-compatable DOM templating.
 
