@@ -1,3 +1,7 @@
+#	Library build script.
+#
+#	Will place toolkit.js and toolkit.min.js in the repository root.
+
 fs = require 'fs'
 ugly = require 'uglify-js'
 coffee = require 'coffeescript'
@@ -27,6 +31,6 @@ header = '''/*
 es5 = compileWithIncludes 'toolkit'
 
 fs.writeFileSync 'toolkit.js', header + es5
-
 fs.writeFileSync 'toolkit.min.js', header + (ugly.minify es5).code 
-console.log 'Minified'
+
+console.log 'Done'

@@ -1,6 +1,11 @@
+dist: trusty
+
 language: node_js
 node_js:
   - 8.10
+
+before_script:
+  - cat required_packages | xargs npm install
 script:
-  # TODO
-  - /usr/bin/yes
+  - coffee build.coffee
+  - coffee ./tests.run

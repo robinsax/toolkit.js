@@ -1,0 +1,5 @@
+coffeescript
+uglify-js
+babel-core
+babel-preset-es2015
+babel-plugin-transform-react-jsx
