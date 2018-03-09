@@ -143,7 +143,7 @@ Toolkit = callable class _Toolkit
 				result.push returned
 		returned
 	
-	tag: (tagName, attributes={}, children=[]) ->
+	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
 		(el.setAttribute key, value) for key, value of attributes
 		(el.appendChild @tag child) for child in children

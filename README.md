@@ -5,7 +5,7 @@
 toolkit.js is an experimental JavaScript library tooled to support DOM manipulation and inspection,
 AJAX, object and array reflection, and JSX-compatable DOM templating.
 
-It is best enjoyed with CoffeeScript, but is equally suitable to pure JavaScript development.
+Although toolkit.js is written in CoffeeScript, it can be used for any form of JavaScript development.
 
 ##	Building from source
 
