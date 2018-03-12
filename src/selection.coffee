@@ -1,6 +1,10 @@
 class ToolkitSelection
 	@tk: null
 	@clean: (set) ->
+		if set instanceof Node
+			return [set]
+		else if set instanceof ToolkitSelection
+			set = set.set
 		clean = []
 		for item in set
 			if item instanceof ToolkitSelection
@@ -16,12 +20,14 @@ class ToolkitSelection
 		else if selection instanceof Element or selection instanceof Node or selection instanceof Window
 			@set = [selection]
 		else if selection instanceof NodeList or selection instanceof Array
-			@set = ToolkitSelection.clean selection
+			@set = []
+			for item in selection
+				@set = @set.concat ToolkitSelection.clean item
 		else if typeof selection == 'string'
 			@set = ToolkitSelection.tk.config.root.querySelectorAll selection
 		else
-			throw 'Illegal selection'
-	
+			throw 'Illegal selection: ' + selection
+
 		@length = @set.length
 		@empty = @length == 0
 	
@@ -130,9 +136,9 @@ class ToolkitSelection
 		checkType = ['string', 'function'].indexOf typeof check
 		
 		for el, i in @set
-			if checkType == 0 and not e.matches check
+			if checkType == 0 and (el.nodeType == Node.TEXT_NODE or not el.matches check)
 				return false
-			else if checkType == 1 and not check((new ToolkitSelection e), i)
+			else if checkType == 1 and not check((new ToolkitSelection el), i)
 				return false
 		true
 
@@ -172,7 +178,7 @@ class ToolkitSelection
 		if typeof nameOrMap == 'string'
 			if value == _sentinel
 				#	Get.
-				return @first().attr nameOrMap
+				return @set[0].getAttribute nameOrMap
 			else
 				#	Set.
 				for el in @set
@@ -213,14 +219,17 @@ class ToolkitSelection
 		@
 	
 	on: (nameOrMap, callback=_sentinel) ->
-		attachOne = (name, value) =>
+		attachOne = (name, callback) =>
 			@iter (el, i) ->
 				pure = el.first false
 				if not pure.__listeners__
 					pure.__listeners__ = []
-				
+
+				if typeof name == 'function'
+					name = name el, i
+					
 				repr =
-					event: ToolkitSelection.tk.resolve event, el, i
+					event: name
 					callback: (g) -> callback el, g, i
 				
 				pure.__listeners__.push repr
@@ -236,7 +245,7 @@ class ToolkitSelection
 			else
 				attachOne nameOrMap, callback
 		else if typeof nameOrMap == 'object'
-			attachOne name, value for key, value of nameOrMap
+			(attachOne name, value) for name, value of nameOrMap
 		else
 			throw 'Illegal argument'
 		@
@@ -252,12 +261,15 @@ class ToolkitSelection
 		@
 
 	classify: (classOrMap, value=true, time=_sentinel) ->
-		classifyOne = (name, flag, time) ->
+		classifyOne = (name, flag, time) =>
 			if flag == 'toggle'
 				#	Special second parameter case.
 				flag = (el, i) -> not e.is(selector)
 			@iter (el, i) ->
-				flagValue = ToolkitSelection.tk.resolve flag, el, i
+				flagValue = flag
+				if typeof flagValue == 'function'
+					flagValue = flagValue el, i
+				
 				classes = el.classes()
 				has = name in classes
 				if flagValue and not has
@@ -268,14 +280,16 @@ class ToolkitSelection
 				el.set[0].className = classes.join(' ').trim()
 					
 				if time != _sentinel
-					timeValue = ToolkitSelection.tk.resolve time, el, i
+					timeValue = time
+					if typeof timeValue == 'function'
+						timeValue = timeValue el, i
 					ToolkitSelection.tk.timeout timeValue, (el) -> 
-						classifyOne name, !actualFlag, _sentinel
+						classifyOne name, !flagValue, _sentinel
 		
 		if typeof classOrMap == 'string'
 			classifyOne classOrMap, value, time
 		else
-			classifyOne name, flag for name, flag of @classOrMap
+			(classifyOne name, flag, _sentinel) for name, flag of classOrMap
 		@
 
 	remove: () ->

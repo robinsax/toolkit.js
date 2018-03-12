@@ -104,7 +104,7 @@ Toolkit = callable class _Toolkit
 
 	#	Function name retrieval.
 	nameOf: (func) ->
-		/^function\s+([\w\$]+)\s*\(/.exec func.toString() ? '<anonymous function>'
+		(/^function\s+([\w\$]+)\s*\(/.exec func.toString()) ? '<anonymous function>'
 
 	#	Resolve a potentially functional parameter.
 	#	DEPRICATED
@@ -142,6 +142,9 @@ Toolkit = callable class _Toolkit
 			if returned?
 				result.push returned
 		returned
+
+	timeout: (time, callback) ->
+		setTimeout callback, time
 	
 	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
