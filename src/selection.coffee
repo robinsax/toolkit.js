@@ -198,7 +198,7 @@ class ToolkitSelection
 				return
 			@
 		else
-			throw 'Illegal argument'
+			throw 'Illegal argument: ' + nameOrMap
 
 	css: (propertyOrMap, value=_sentinel) ->
 		applyOne = (name, value) =>

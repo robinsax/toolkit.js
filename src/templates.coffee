@@ -39,3 +39,4 @@ guts.attach callable class _Templates
 			tag: tag
 			attributes: attributes or {}
 			children: children
+			_virtual: true
