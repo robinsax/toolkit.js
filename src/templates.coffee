@@ -11,7 +11,7 @@ class ToolkitTemplate
 		if not virtual
 			return document.createTextNode ''
 
-		if typeof virtual == 'string'
+		if typeof virtual == 'string' or typeof virtual == 'number'
 			result = document.createTextNode virtual
 		else if typeof virtual == 'function'
 			result = @_realize virtual()

@@ -135,13 +135,16 @@ Toolkit = callable class _Toolkit
 		return
 
 	#	Comprehension.
-	compr: (array, callback) ->
+	comp: (array, callback) ->
 		result = []
 		for item, i in array
 			returned = callback item, i
 			if returned?
 				result.push returned
-		returned
+		result
+	compr: (array, callback) ->
+		console.warn 'compr() is deprecated! Use comp() instead.'
+		@comp array, callback
 
 	timeout: (time, callback) ->
 		setTimeout callback, time

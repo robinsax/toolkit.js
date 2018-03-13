@@ -70,18 +70,22 @@ class ToolkitSelection
 		new ToolkitSelection @set.concat set, @
 	
 	parents: (condition='*', high=true) ->
-		conditionType = ['string', 'function'].indexOf typeof condition
+		conditionType = ['string', 'function', 'boolean'].indexOf typeof condition
 		if conditionType < 0
 			throw 'Illegal condition'
+		else if conditionType == 2
+			conditionType = 0
+			condition = '*'
+			high = false
 
 		checkElement = (element, index) ->
-			if conditionType == 0 then e.is condition else condition element, index
+			if conditionType == 0 then element.is condition else condition element, index
 		
 		set = []
 		@iter (el, i) ->
-			parent = el.parentNode
+			parent = el.first(false).parentNode
 			while parent != ToolkitSelection.tk.config.root
-				set.push parent if checkElement parent, i
+				(set.push parent) if checkElement tk parent, i
 				if not high
 					return
 				parent = parent.parentNode
