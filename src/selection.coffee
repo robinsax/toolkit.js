@@ -1,5 +1,6 @@
 class ToolkitSelection
 	@tk: null
+	#	TODO: Clean efficiency.
 	@clean: (set) ->
 		if set instanceof Node
 			return [set]
@@ -306,8 +307,7 @@ class ToolkitSelection
 		children = new ToolkitSelection children, @
 		children.remove()
 
-		inspected = children.extend children.children()
-		ToolkitSelection.tk.guts.inspect inspected
+		ToolkitSelection.tk.guts.inspect children
 
 		@set[0].appendChild child for child in children.set
 		children
@@ -316,8 +316,7 @@ class ToolkitSelection
 		children = new ToolkitSelection children, @
 		children.remove()
 
-		inspected = children.extend children.children()
-		ToolkitSelection.tk.guts.inspect inspected
+		ToolkitSelection.tk.guts.inspect children
 
 		@set[0].prepend child for child in children.set by -1
 		children

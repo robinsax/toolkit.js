@@ -48,7 +48,9 @@ class ToolkitGuts
 		@
 
 	inspect: (check) ->
-		f(check) for f in @inspectionFunctions
+		if @inspectionFunctions.length > 0
+			check = check.extend check.children()
+			f(check) for f in @inspectionFunctions
 		@
 
 #	Create the guts.

@@ -6,6 +6,12 @@ class ToolkitTemplate
 		@_data = data
 		@
 
+	_safeAppend: (target, toAppend) ->
+		if toAppend instanceof Array
+			(target.appendChild item) for item in toAppend
+		else
+			target.appendChild toAppend
+
 	#	Realize a virtual node (as a DOM node).
 	_realize: (virtual) ->
 		if not virtual
@@ -18,9 +24,9 @@ class ToolkitTemplate
 		else if virtual instanceof Array
 			result = (@_realize item for item in virtual)
 		else
-			result = @tk.tag virtual.tag
-				.attr virtual.attributes
-			result.append @_realize child for child in virtual.children
+			result = document.createElement virtual.tag
+			(result.setAttribute name, value) for name, value of virtual.attributes
+			(@_safeAppend result, (@_realize child)) for child in virtual.children
 
 		result
 	
