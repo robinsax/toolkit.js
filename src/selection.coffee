@@ -385,7 +385,7 @@ class ToolkitSelection
 		el = @set[0]
 		while el
 			o.x += el.offsetLeft
-			o.y += el.offsetRight
+			o.y += el.offsetTop
 			if toParent
 				break
 			el = el.offsetParent
