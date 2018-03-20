@@ -53,10 +53,10 @@ class ToolkitSelection
 	reduce: (reducer) ->
 		switch typeof reducer
 			when 'string'
-				set = @compr (el) ->
+				set = @comp (el) ->
 					el if el.is reducer
 			when 'function'
-				set = @compr reducer
+				set = @comp reducer
 			else
 				throw 'Illegal reducer'
 		new ToolkitSelection set, @
@@ -128,7 +128,7 @@ class ToolkitSelection
 				break
 		@
 
-	compr: (callback) ->
+	comp: (callback) ->
 		result = []
 		for el, i in @set
 			el = new ToolkitSelection el
