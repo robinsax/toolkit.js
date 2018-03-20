@@ -346,7 +346,7 @@ class ToolkitSelection
 		if node == _sentinel
 			if @empty
 				return new ToolkitSelection []
-			new ToolkitSelection @set[0].prevSibling, @
+			new ToolkitSelection @set[0].previousSibling, @
 		else
 			if not node instanceof ToolkitSelection
 				node = tk node
