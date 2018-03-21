@@ -269,7 +269,7 @@ class ToolkitSelection
 		classifyOne = (name, flag, time) =>
 			if flag == 'toggle'
 				#	Special second parameter case.
-				flag = (el, i) -> not e.is(selector)
+				flag = (el, i) -> not el.is(selector)
 			@iter (el, i) ->
 				flagValue = flag
 				if typeof flagValue == 'function'
