@@ -63,10 +63,16 @@ guts = new ToolkitGuts
 
 Toolkit = callable class _Toolkit
 	constructor: () ->
+		@initialized = false
 		#	Define the 'here' debug helper.
+		first = true
 		Object.defineProperty @, 'here',
-			get: () =>
-				@log 'here'
+			get: () => 
+				if first
+					first = false
+					return
+				console.log 'here'
+				'here'
 
 	_call: (selection) ->
 		new ToolkitSelection selection
@@ -82,14 +88,18 @@ Toolkit = callable class _Toolkit
 
 		#	Prepare initialization.
 		if /complete|loaded|interactive/.test document?.readyState
+			@initialized = true
 			@guts.init()
 		else if window?
 			window.addEventListener 'DOMContentLoaded', () =>
+				@initialized = true
 				@guts.init()
 		return
 
 	#	Initialization callback registery.
 	init: (callback) ->
+		if @initialized
+			callback()
 		@guts.initFunctions.push callback
 		@
 	
@@ -104,10 +114,11 @@ Toolkit = callable class _Toolkit
 			console.log.apply null, args
 		args[0]
 
-	#	Function name retrieval.
-	nameOf: (func) ->
-		(/^function\s+([\w\$]+)\s*\(/.exec func.toString()) ? '<anonymous function>'
-
+	warn: (...args) ->
+		if @config?.debug
+			console.warn.apply null, args
+		args[0]
+	
 	#	Resolve a potentially functional parameter.
 	#	DEPRICATED
 	resolve: (thing, ...args) ->
@@ -129,9 +140,13 @@ Toolkit = callable class _Toolkit
 	#	Iteration.
 	iter: (iterable, callback) ->
 		if iterable instanceof Array
-			(callback item, i) for item, i in iterable
+			for item, i in iterable
+				if (callback item, i) == false
+					break
 		else if typeof iterable == 'object'
-			(callback name, value) for name, value of iterable
+			for name, value of iterable
+				if (callback name, value) == false
+					break
 		else
 			throw 'Not iterable: ' + iterable
 		return
@@ -154,14 +169,18 @@ Toolkit = callable class _Toolkit
 	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
 		(el.setAttribute key, value) for key, value of attributes
-		(el.appendChild @tag child) for child in children
+		for child in children
+			if typeof child == 'string'
+				el.appendChild document.createTextNode child
+			else
+				el.appendChild @tag child
 		new ToolkitSelection el
 
 #	Export either to the window or as a module, depending on context.
 toolkit = 
 	create: (config={}) ->
 		tk = new Toolkit
-		tk._finalize(config)
+		tk._finalize config
 		tk
 if window?
 	window.toolkit = toolkit

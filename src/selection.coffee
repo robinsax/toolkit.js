@@ -307,7 +307,8 @@ class ToolkitSelection
 		children = new ToolkitSelection children, @
 		children.remove()
 
-		ToolkitSelection.tk.guts.inspect children
+		if !@first().parents().reduce('body').empty
+			ToolkitSelection.tk.guts.inspect children
 
 		@set[0].appendChild child for child in children.set
 		children
@@ -316,7 +317,8 @@ class ToolkitSelection
 		children = new ToolkitSelection children, @
 		children.remove()
 
-		ToolkitSelection.tk.guts.inspect children
+		if !@first().parents().reduce('body').empty
+			ToolkitSelection.tk.guts.inspect children
 
 		@set[0].prepend child for child in children.set by -1
 		children

@@ -2,8 +2,8 @@ class ToolkitTemplate
 	constructor: (@tk, @definition) ->
 		@_data = null
 
-	data: (data) ->
-		@_data = data
+	data: () ->
+		@_data = arguments
 		@
 
 	_safeAppend: (target, toAppend) ->
@@ -31,7 +31,7 @@ class ToolkitTemplate
 		result
 	
 	render: () ->
-		return @tk @_realize @definition @_data
+		return @tk @_realize (@definition.apply null, @_data)
 
 guts.attach callable class _Templates
 	constructor: () ->
