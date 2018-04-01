@@ -159,13 +159,23 @@ Toolkit = callable class _Toolkit
 			if returned?
 				result.push returned
 		result
-	compr: (array, callback) ->
-		console.warn 'compr() is deprecated! Use comp() instead.'
-		@comp array, callback
-
-	timeout: (time, callback) ->
-		setTimeout callback, time
 	
+	timeout: (time, callback) ->
+		id = setTimeout callback, time
+		cancel: () -> clearTimeout(id)
+	
+	transition: (callback) ->
+		if requestAnimationFrame
+			wrappedCallback = (time) ->
+				if (callback time) != false
+					requestAnimationFrame wrappedCallback
+
+			requestAnimationFrame wrappedCallback
+		else
+			hook = timeout 16, () ->
+				if (callback 16) == false
+					hook.cancel()
+
 	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
 		(el.setAttribute key, value) for key, value of attributes

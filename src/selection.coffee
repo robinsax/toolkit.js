@@ -85,7 +85,7 @@ class ToolkitSelection
 		set = []
 		@iter (el, i) ->
 			parent = el.first(false).parentNode
-			while parent != ToolkitSelection.tk.config.root
+			while parent != ToolkitSelection.tk.config.root and parent != null
 				(set.push parent) if checkElement tk parent, i
 				if not high
 					return
@@ -306,8 +306,8 @@ class ToolkitSelection
 	append: (children) ->
 		children = new ToolkitSelection children, @
 		children.remove()
-
-		if !@first().parents().reduce('body').empty
+	
+		if not @first().parents('body').empty
 			ToolkitSelection.tk.guts.inspect children
 
 		@set[0].appendChild child for child in children.set
@@ -317,15 +317,22 @@ class ToolkitSelection
 		children = new ToolkitSelection children, @
 		children.remove()
 
-		if !@first().parents().reduce('body').empty
+		if not @first().parents('body').empty
 			ToolkitSelection.tk.guts.inspect children
 
 		@set[0].prepend child for child in children.set by -1
 		children
 
 	replace: (newNode) ->
+		if not @first().parents('body').empty
+			newNodeI = newNode
+			if not (newNodeI instanceof ToolkitSelection)
+				newNodeI = new ToolkitSelection newNodeI, @
+			ToolkitSelection.tk.guts.inspect newNodeI
+
 		if newNode instanceof ToolkitSelection
 			newNode = newNode.first false
+
 		@set[0].parentNode.replaceChild newNode, @set[0]
 		new ToolkitSelection newNode, @parent
 
