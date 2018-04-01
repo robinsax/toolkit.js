@@ -154,6 +154,10 @@ class ToolkitSelection
 			all.push cls for cls in mine when cls not in all
 		all
 
+	focus: () ->
+		@set[0].focus()
+		@
+
 	value: (value= _sentinel) ->
 		if value == _sentinel
 			#	Get.

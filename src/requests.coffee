@@ -52,9 +52,9 @@ class Request
 		#	Prepare data.
 		fullURL = @info.url
 		serializedBody = ''
-		queryKeys = Object.keys(@info.query)
+		queryKeys = Object.getOwnPropertyNames @info.query
 		
-		if queryKeys > 0
+		if queryKeys.length > 0
 			queryStatements = ((key + '=' + encodeURIComponent @info.query[key]) for key in queryKeys)
 			fullURL += '?' + queryStatements.join '&'
 		
