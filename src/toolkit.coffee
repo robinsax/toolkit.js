@@ -166,15 +166,23 @@ Toolkit = callable class _Toolkit
 	
 	transition: (callback) ->
 		if requestAnimationFrame
+			start = null
 			wrappedCallback = (time) ->
+				if start == null
+					start = time
+					time = 0
+				else
+					time -= start
 				if (callback time) != false
 					requestAnimationFrame wrappedCallback
 
 			requestAnimationFrame wrappedCallback
 		else
+			time = 0
 			hook = timeout 16, () ->
-				if (callback 16) == false
+				if (callback time) == false
 					hook.cancel()
+				time += 16
 
 	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
