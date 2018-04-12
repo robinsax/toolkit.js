@@ -82,6 +82,8 @@ Toolkit = callable class _Toolkit
 		@config =
 			root: config.root ? (document ? null)
 			debug: config.debug ? false
+			iteration:
+				ignoreKeys: ['__listeners__'].concat (config.iteration?.ignoreKeys ? [])
 		
 		#	Create guts.
 		@guts = guts.onto @
@@ -145,6 +147,8 @@ Toolkit = callable class _Toolkit
 					break
 		else if typeof iterable == 'object'
 			for name, value of iterable
+				if name in @config.iteration.ignoreKeys
+					continue
 				if (callback name, value) == false
 					break
 		else
@@ -161,11 +165,14 @@ Toolkit = callable class _Toolkit
 					result.push returned
 		else if typeof iterable == 'object'
 			for name, value of iterable
+				if name in @config.iteration.ignoreKeys
+					continue
 				returned = callback name, value
 				if returned?
 					result.push returned
 		else
 			throw 'Not iterable: ' + iterable
+
 		result
 	
 	timeout: (time, callback) ->
