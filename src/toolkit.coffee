@@ -152,12 +152,20 @@ Toolkit = callable class _Toolkit
 		return
 
 	#	Comprehension.
-	comp: (array, callback) ->
+	comp: (iterable, callback) ->
 		result = []
-		for item, i in array
-			returned = callback item, i
-			if returned?
-				result.push returned
+		if iterable instanceof Array
+			for item, i in iterable
+				returned = callback item, i
+				if returned?
+					result.push returned
+		else if typeof iterable == 'object'
+			for name, value of iterable
+				returned = callback name, value
+				if returned?
+					result.push returned
+		else
+			throw 'Not iterable: ' + iterable
 		result
 	
 	timeout: (time, callback) ->
