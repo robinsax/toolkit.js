@@ -74,6 +74,9 @@ Toolkit = callable class _Toolkit
 				console.log 'here'
 				'here'
 
+		@_dataK = 0
+		@_dataStore = {}
+
 	_call: (selection) ->
 		new ToolkitSelection selection
 
@@ -155,21 +158,37 @@ Toolkit = callable class _Toolkit
 			throw 'Not iterable: ' + iterable
 		return
 
+	_markData: (virtual, toStore) ->
+		@_dataStore[@_dataK + ''] = toStore
+		virtual._dataK = @_dataK
+		@_dataK++
+		return virtual
+
 	#	Comprehension.
-	comp: (iterable, callback) ->
+	comp: (iterable, callback) -> 
 		result = []
 		if iterable instanceof Array
 			for item, i in iterable
 				returned = callback item, i
 				if returned?
-					result.push returned
+					if returned.__tkVirtual__?
+						result.push @_markData returned, 
+							_tkData: item,
+							_tkIndex: i
+					else
+						result.push returned
 		else if typeof iterable == 'object'
 			for name, value of iterable
 				if name in @config.iteration.ignoreKeys
 					continue
 				returned = callback name, value
 				if returned?
-					result.push returned
+					if returned.__tkVirtual__?
+						result.push @_markData returned,
+							_tkData: value,
+							_tkKey: name
+					else
+						result.push returned
 		else
 			throw 'Not iterable: ' + iterable
 

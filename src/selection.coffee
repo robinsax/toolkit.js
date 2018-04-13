@@ -429,6 +429,21 @@ class ToolkitSelection
 		
 		size
 
+	data: () ->
+		if @set[0]._tkData?
+			return @set[0]._tkData
+		throw 'No data.'
+
+	key: () ->
+		if @set[0]._tkKey?
+			return @set[0]._tkKey
+		throw 'No key.'
+	
+	index: () ->
+		if @set[0].__tkIndex?
+			return @set[0]._tkIndex
+		throw 'No index.'
+
 guts.attach class _SelectionModule
 	constructor: (tk) ->
 		tk.ToolkitSelection = ToolkitSelection

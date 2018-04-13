@@ -26,17 +26,22 @@ class ToolkitTemplate
 		else
 			result = document.createElement virtual.tag
 			(result.setAttribute name, value) for name, value of virtual.attributes
+
+			if virtual._dataK?
+				@tk.iter @tk._dataStore[virtual._dataK], (key, value) -> 
+					result[key] = value
+
 			(@_safeAppend result, (@_realize child)) for child in virtual.children
 
 		result
-	
+
 	render: () ->
 		return @tk @_realize (@definition.apply null, @_data)
 
 guts.attach callable class _Templates
 	constructor: () ->
 		@called = 'template'
-	
+
 	_call: (definition) ->
 		new ToolkitTemplate @, definition
 
@@ -45,4 +50,4 @@ guts.attach callable class _Templates
 			tag: tag
 			attributes: attributes or {}
 			children: children
-			_virtual: true
+			__tkVirtual__: true
