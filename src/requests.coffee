@@ -46,7 +46,7 @@ class Request
 				when 'application/json'
 					data = JSON.parse data
 			
-			@tk.log 'Received ' + status + ' (' + @info.method + ', ' + @info.url + ')', @data
+			@tk.log 'Received ' + status + ' (' + @info.method + ', ' + @info.url + ')', data
 			(if status < 400 then @info.success else @info.failure)(data, status)
 		
 		#	Prepare data.
