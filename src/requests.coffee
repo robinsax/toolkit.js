@@ -19,7 +19,7 @@ class Request
 
 	json: (data) ->
 		@info.headers['Content-Type'] = 'application/json'
-		@info.body = @tk.unbound data
+		@info.body = data
 		@
 	
 	data: (data, mimetype='text/plain') ->
