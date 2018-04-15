@@ -19,7 +19,7 @@ class Request
 
 	json: (data) ->
 		@info.headers['Content-Type'] = 'application/json'
-		@info.body = @tk.unbound data
+		@info.body = data
 		@
 	
 	data: (data, mimetype='text/plain') ->
@@ -46,7 +46,7 @@ class Request
 				when 'application/json'
 					data = JSON.parse data
 			
-			@tk.log 'Received ' + status + ' (' + @info.method + ', ' + @info.url + ')'
+			@tk.log 'Received ' + status + ' (' + @info.method + ', ' + @info.url + ')', data
 			(if status < 400 then @info.success else @info.failure)(data, status)
 		
 		#	Prepare data.

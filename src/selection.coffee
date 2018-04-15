@@ -442,7 +442,7 @@ class ToolkitSelection
 		throw 'No key.'
 	
 	index: () ->
-		if @set[0].__tkIndex?
+		if @set[0]._tkIndex?
 			return @set[0]._tkIndex
 		throw 'No index.'
 
