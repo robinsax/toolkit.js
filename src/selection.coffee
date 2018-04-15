@@ -163,6 +163,8 @@ class ToolkitSelection
 			#	Get.
 			if @set[0].type == 'checkbox'
 				return @set[0].checked
+			else if @set[0].type == 'file'
+				return @set[0].files
 			
 			value = @set[0].value
 			if not value
