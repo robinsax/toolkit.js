@@ -38,6 +38,9 @@ class ToolkitTemplate
 	render: () ->
 		return @tk @_realize (@definition.apply null, @_data)
 
+	renderVirtual: () ->
+		return @definition.apply null, @_data
+
 guts.attach callable class _Templates
 	constructor: () ->
 		@called = 'template'
