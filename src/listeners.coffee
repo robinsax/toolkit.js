@@ -2,7 +2,10 @@ class ToolkitPListener
 	constructor: (@object, @property) ->
 		#	Ensure tracking and property existance.
 		if not @object.__listeners__
-			@object.__listeners__ = {}
+			Object.defineProperty @object, '__listeners__',
+				value: {},
+				enumerable: false,
+				writable: true
 		
 		if not @object.__listeners__[@property]
 			@object.__listeners__[@property] = []

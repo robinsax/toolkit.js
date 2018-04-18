@@ -193,10 +193,13 @@ class ToolkitSelection
 			else
 				#	Set.
 				for el in @set
-					if value == null
-						el.removeAttribute(nameOrMap)
+					realValue = value
+					if typeof realValue == 'function'
+						realValue = realValue new ToolkitSelection el, @
+					if realValue == null
+						el.removeAttribute nameOrMap
 					else
-						el.setAttribute(nameOrMap, value)
+						el.setAttribute nameOrMap, realValue
 				@
 		else if typeof nameOrMap == 'object'
 			@iter (el) ->
