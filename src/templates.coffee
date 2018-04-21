@@ -25,7 +25,12 @@ class ToolkitTemplate
 			result = (@_realize item for item in virtual)
 		else
 			result = document.createElement virtual.tag
-			(result.setAttribute name, value) for name, value of virtual.attributes
+
+			for name, value of virtual.attributes
+				if name == 'markup'
+					result.innerHTML = value
+				else
+					result.setAttribute name, value
 
 			if virtual._dataK?
 				@tk.iter @tk._dataStore[virtual._dataK], (key, value) -> 
