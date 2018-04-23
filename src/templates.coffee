@@ -35,8 +35,9 @@ class ToolkitTemplate
 			if virtual._dataK?
 				@tk.iter @tk._dataStore[virtual._dataK], (key, value) -> 
 					result[key] = value
-
-			(@_safeAppend result, (@_realize child)) for child in virtual.children
+			
+			if virtual.children?
+				(@_safeAppend result, @_realize child) for child in virtual.children
 
 		result
 
