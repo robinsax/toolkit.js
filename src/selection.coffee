@@ -1,3 +1,5 @@
+Element.prototype.matches = Element.prototype.matches or Element.prototype.msMatchesSelector or Element.prototype.webkitMatchesSelector
+
 class ToolkitSelection
 	@tk: null
 	#	TODO: Clean efficiency.
@@ -329,7 +331,7 @@ class ToolkitSelection
 		if not @first().parents('body').empty
 			ToolkitSelection.tk.guts.inspect children
 
-		@set[0].prepend child for child in children.set by -1
+		(@set[0].insertBefore child, @set[0].firstChild) for child in children.set by -1
 		children
 
 	replace: (newNode) ->
@@ -349,9 +351,10 @@ class ToolkitSelection
 
 	next: (node=_sentinel) ->
 		if node == _sentinel
-			if @empty
-				return new ToolkitSelection []
-			new ToolkitSelection @set[0].nextSibling, @
+			if @empty or @set[0].nextSibling == null
+				new ToolkitSelection []
+			else
+				new ToolkitSelection @set[0].nextSibling, @
 		else
 			if not node instanceof ToolkitSelection
 				node = tk node
@@ -362,9 +365,10 @@ class ToolkitSelection
 
 	prev: (node=_sentinel) -> 
 		if node == _sentinel
-			if @empty
-				return new ToolkitSelection []
-			new ToolkitSelection @set[0].previousSibling, @
+			if @empty or @set[0].previousSibling == null
+				new ToolkitSelection []
+			else
+				new ToolkitSelection @set[0].previousSibling, @
 		else
 			if not node instanceof ToolkitSelection
 				node = tk node
@@ -401,9 +405,9 @@ class ToolkitSelection
 			y: 0
 		
 		el = @set[0]
-		while el
-			o.x += el.offsetLeft
-			o.y += el.offsetTop
+		while el != null
+			o.x += el.offsetLeft or 0
+			o.y += el.offsetTop or 0
 			if toParent
 				break
 			el = el.offsetParent

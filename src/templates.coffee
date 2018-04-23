@@ -38,7 +38,8 @@ class ToolkitTemplate
 			
 			if virtual.children?
 				(@_safeAppend result, @_realize child) for child in virtual.children
-
+			
+			virtual.result = result
 		result
 
 	render: (thisTarget=null) ->
