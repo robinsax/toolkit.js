@@ -1,4 +1,5 @@
-Element.prototype.matches = Element.prototype.matches or Element.prototype.msMatchesSelector or Element.prototype.webkitMatchesSelector
+if Element
+	Element.prototype.matches = Element.prototype.matches or Element.prototype.msMatchesSelector or Element.prototype.webkitMatchesSelector
 
 class ToolkitSelection
 	@tk: null
