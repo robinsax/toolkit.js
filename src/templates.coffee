@@ -115,7 +115,9 @@ class ToolkitTemplate
 		virtual = @definition.apply null, @_data
 		if @_live
 			if @_reference
-				@_update @_result.parentNode, virtual, @_reference
+				parent = @_result.parentNode
+				thisIndex = Array.prototype.indexOf.call parent.childNodes, @_result
+				@_update parent, virtual, @_reference, thisIndex
 			else
 				@_result = @_create virtual
 			@_reference = virtual

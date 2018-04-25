@@ -27,6 +27,6 @@ let t = tk.template(x).inspection((el) => {
 	})
 }).data([1, 2, 3]).live();
 
-tk('div').append(t.render());
+tk('body').append(t.render());
 
 window.f = (d) => t.data(d).render();
