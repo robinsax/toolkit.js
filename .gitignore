@@ -3,3 +3,4 @@ node_modules
 package-lock.json
 toolkit.min.js
 toolkit.js
+dev/test.js

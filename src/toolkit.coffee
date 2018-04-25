@@ -164,6 +164,9 @@ Toolkit = callable class _Toolkit
 		@_dataK++
 		return virtual
 
+	_isVirtual: (object) ->
+		return object.tag? and object.attributes? and object.children?
+
 	#	Comprehension.
 	comp: (iterable, callback) -> 
 		result = []
@@ -171,7 +174,7 @@ Toolkit = callable class _Toolkit
 			for item, i in iterable
 				returned = callback item, i
 				if returned?
-					if returned.__tkVirtual__?
+					if @_isVirtual returned
 						result.push @_markData returned, 
 							_tkData: item,
 							_tkIndex: i
@@ -183,7 +186,7 @@ Toolkit = callable class _Toolkit
 					continue
 				returned = callback name, value
 				if returned?
-					if returned.__tkVirtual__?
+					if @_isVirtual returned
 						result.push @_markData returned,
 							_tkData: value,
 							_tkKey: name

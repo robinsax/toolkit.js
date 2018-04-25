@@ -1,6 +1,7 @@
-#	Library build script.
+#	Build script.
 #
 #	Will place toolkit.js and toolkit.min.js in the repository root.
+#
 
 fs = require 'fs'
 ugly = require 'uglify-js'

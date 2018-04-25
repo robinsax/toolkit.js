@@ -72,6 +72,9 @@ class ToolkitSelection
 			throw 'Illegal extension'
 		new ToolkitSelection @set.concat set, @
 	
+	parent: () ->
+		@set[0].parentNode or null
+
 	parents: (condition='*', high=true) ->
 		conditionType = ['string', 'function', 'boolean'].indexOf typeof condition
 		if conditionType < 0
@@ -246,10 +249,10 @@ class ToolkitSelection
 					
 				repr =
 					event: name
-					callback: (g) -> callback el, g, i
+					callback: callback
 				
 				pure.__listeners__.push repr
-				pure.addEventListener repr.event, repr.callback
+				pure.addEventListener repr.event, (g) -> callback el, g
 
 		if typeof nameOrMap == 'string'
 			if callback == _sentinel
