@@ -76,6 +76,13 @@ class ToolkitSelection
 	parent: () ->
 		@set[0].parentNode or null
 
+	search: (condition) ->
+		if not condition
+			throw 'No condition'
+
+		result = (@reduce condition).set
+		new ToolkitSelection (result.concat (@children condition).set), @
+
 	parents: (condition='*', high=true) ->
 		conditionType = ['string', 'function', 'boolean'].indexOf typeof condition
 		if conditionType < 0
@@ -443,19 +450,28 @@ class ToolkitSelection
 		size
 
 	data: () ->
-		if @set[0]._tkData?
-			return @set[0]._tkData
-		throw 'No data.'
+		cur = @set[0]
+		while not cur._tkData?
+			cur = @set[0].parentNode
+			if not cur
+				throw 'No data.'
+		cur._tkData
 
 	key: () ->
-		if @set[0]._tkKey?
-			return @set[0]._tkKey
-		throw 'No key.'
+		cur = @set[0]
+		while not cur._tkKey?
+			cur = @set[0].parentNode
+			if not cur
+				throw 'No key.'
+		cur._tkKey
 	
 	index: () ->
-		if @set[0]._tkIndex?
-			return @set[0]._tkIndex
-		throw 'No index.'
+		cur = @set[0]
+		while not cur._tkIndex?
+			cur = @set[0].parentNode
+			if not cur
+				throw 'No index.'
+		cur._tkIndex
 
 guts.attach class _SelectionModule
 	constructor: (tk) ->

@@ -103,7 +103,12 @@ class ToolkitTemplate
 					result[key] = value
 			
 			if virtual.children?
-				result.appendChild (@_create child) for child in virtual.children
+				for child in virtual.children
+					make = @_create child
+					if make instanceof Array
+						result.appendChild m for m in make
+					else
+						result.appendChild make 
 			
 			virtual.result = result
 			
@@ -132,14 +137,24 @@ guts.attach callable class _Templates
 	_call: (definition) ->
 		new ToolkitTemplate @, definition
 
+	_flatten: (list) ->
+		flat = false
+		while not flat
+			pass = []
+			flat = true
+
+			for item in list
+				if item instanceof Array
+					pass = pass.concat item
+					flat = false
+				else
+					pass.push item
+
+			list = pass
+		return pass
+
 	tag: (tag, attributes, ...children) ->
-		result = []
-		for child in children
-			if child instanceof Array
-				result = result.concat child
-			else
-				result.push child
 		return 
 			tag: tag
 			attributes: attributes or {}
-			children: result
+			children: @_flatten children
