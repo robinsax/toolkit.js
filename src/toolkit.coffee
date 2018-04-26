@@ -221,6 +221,14 @@ Toolkit = callable class _Toolkit
 					hook.cancel()
 				time += 16
 
+	update: (dest, src) ->
+		for key of src
+			if dest[key]? and typeof dest[key] == 'object' and typeof src[key] == 'object'
+				@update dest[key], src[key]
+				continue
+			dest[key] = src[key]
+
+
 	tag: (tagName, attributes={}, ...children) ->
 		el = document.createElement(tagName)
 		(el.setAttribute key, value) for key, value of attributes
