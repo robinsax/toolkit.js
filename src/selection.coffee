@@ -265,8 +265,12 @@ class ToolkitSelection
 		if typeof nameOrMap == 'string'
 			if callback == _sentinel
 				#	Get.
-				if pure.__listeners__? 
-					return repr.callback for repr in pure.__listeners__
+				if @set[0].__listeners__?
+					cbs = []
+					for repr in @set[0].__listeners__
+						if repr.event == nameOrMap
+							cbs.push repr.callback
+					return cbs
 				else
 					return []
 			else

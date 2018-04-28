@@ -123,6 +123,9 @@ class ToolkitTemplate
 				parent = @_result.parentNode
 				thisIndex = Array.prototype.indexOf.call parent.childNodes, @_result
 				@_update parent, virtual, @_reference, thisIndex
+
+				#	In the case that the root node changed, we need to re-reference.
+				@_result = parent.childNodes[thisIndex]
 			else
 				@_result = @_create virtual
 			@_reference = virtual
