@@ -1,3 +1,7 @@
+#
+#	YO! fuck dataK. Make data()/index()/key() update a part of updateNode
+#
+
 class ToolkitTemplate
 	constructor: (@tk, @definition) ->
 		@_data = null
@@ -25,19 +29,18 @@ class ToolkitTemplate
 
 	_diffNodes: (node1, node2) ->
 		(
-			(typeof node1 != typeof node2) or
-			(typeof node1 == 'string' and node1 != node2) or
+			(typeof node1 != typeof node2) or 
+			(typeof node1 == 'string' and node1 != node2) or 
 			node1.tag != node2.tag
 		)
 
-	_diffAttrs: (attrs1, attrs2) ->
-		for key of attrs1
-			if not attrs2[key] or attrs1[key] != attrs2[key]
-				return true
-		for key of attrs2
-			if not attrs1[key]
-				return true
-		return false
+	_updateAttrs: (target, newAttrs, oldAttrs) ->
+		for attr of newAttrs
+			if not oldAttrs[attr] or oldAttrs[attr] != newAttrs[attr]
+				target.setAttribute attr, newAttrs[attr]
+		for attr of oldAttrs
+			if not newAttrs[attr]
+				target.removeAttribute attr
 
 	_update: (parent, newNode, oldNode, index=0) ->
 		if not oldNode
@@ -47,23 +50,21 @@ class ToolkitTemplate
 				parent.removeChild parent.childNodes[index]
 				throw 'x'
 		else if @_diffNodes newNode, oldNode
-			replacing = parent.childNodes[index]
 			created = @_create newNode
 
 			if @_listeners
-				if replacing.__listeners__?
-					for listener in replacing.__listeners__
+				if parent.childNodes[index].__listeners__?
+					for listener in parent.childNodes[index].__listeners__
 						created.addEventListener listener.event, (g) => listener.callback (@tk created), g
-					created.__listeners__ = replacing.__listeners__
+					created.__listeners__ = parent.childNodes[index].__listeners__
 			
-			parent.replaceChild created, replacing
+			parent.replaceChild created, parent.childNodes[index]
 		else if newNode.tag
-			if @_diffAttrs newNode.attributes, oldNode.attributes
-				target = parent.childNodes[index]
-				for attribute of oldNode.attributes
-					target.removeAttribute attribute
-				for attribute of newNode.attributes
-					target.setAttribute attribute, newNode.attributes[attribute]
+			@_updateAttrs parent.childNodes[index], newNode.attributes, oldNode.attributes
+			
+			if newNode.__data__
+				@tk.iter newNode.__data__, (key, value) ->
+					parent.childNodes[index][key] = value
 
 			to = Math.max newNode.children.length, oldNode.children.length
 			i = 0
@@ -98,8 +99,8 @@ class ToolkitTemplate
 				else
 					result.setAttribute name, value
 
-			if virtual._dataK?
-				@tk.iter @tk._dataStore[virtual._dataK], (key, value) -> 
+			if virtual.__data__?
+				@tk.iter virtual.__data__, (key, value) -> 
 					result[key] = value
 			
 			if virtual.children?

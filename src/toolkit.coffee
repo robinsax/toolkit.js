@@ -74,9 +74,6 @@ Toolkit = callable class _Toolkit
 				console.log 'here'
 				'here'
 
-		@_dataK = 0
-		@_dataStore = {}
-
 	_call: (selection) ->
 		new ToolkitSelection selection
 
@@ -159,12 +156,10 @@ Toolkit = callable class _Toolkit
 		return
 
 	_markData: (virtual, toStore) ->
-		@_dataStore[@_dataK + ''] = toStore
-		virtual._dataK = @_dataK
-		@_dataK++
+		virtual.__data__ = toStore
 		return virtual
 
-	_isVirtual: (object) ->
+	_isVirtualDOMNode: (object) ->
 		return object.tag? and object.attributes? and object.children?
 
 	#	Comprehension.
@@ -174,7 +169,7 @@ Toolkit = callable class _Toolkit
 			for item, i in iterable
 				returned = callback item, i
 				if returned?
-					if @_isVirtual returned
+					if @_isVirtualDOMNode returned
 						result.push @_markData returned, 
 							_tkData: item,
 							_tkIndex: i
@@ -186,7 +181,7 @@ Toolkit = callable class _Toolkit
 					continue
 				returned = callback name, value
 				if returned?
-					if @_isVirtual returned
+					if @_isVirtualDOMNode returned
 						result.push @_markData returned,
 							_tkData: value,
 							_tkKey: name
