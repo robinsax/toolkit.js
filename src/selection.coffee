@@ -456,7 +456,7 @@ class ToolkitSelection
 	data: () ->
 		cur = @set[0]
 		while not cur._tkData?
-			cur = @set[0].parentNode
+			cur = cur.parentNode
 			if not cur
 				throw 'No data.'
 		cur._tkData
@@ -464,7 +464,7 @@ class ToolkitSelection
 	key: () ->
 		cur = @set[0]
 		while not cur._tkKey?
-			cur = @set[0].parentNode
+			cur = cur.parentNode
 			if not cur
 				throw 'No key.'
 		cur._tkKey
@@ -472,7 +472,7 @@ class ToolkitSelection
 	index: () ->
 		cur = @set[0]
 		while not cur._tkIndex?
-			cur = @set[0].parentNode
+			cur = cur.parentNode
 			if not cur
 				throw 'No index.'
 		cur._tkIndex

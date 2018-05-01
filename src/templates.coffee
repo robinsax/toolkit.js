@@ -31,7 +31,9 @@ class ToolkitTemplate
 		(
 			(typeof node1 != typeof node2) or 
 			(typeof node1 == 'string' and node1 != node2) or 
-			node1.tag != node2.tag
+			node1.tag != node2.tag or
+			#	TODO: Make this work.
+			node1.attributes?.forceRender?
 		)
 
 	_updateAttrs: (target, newAttrs, oldAttrs) ->

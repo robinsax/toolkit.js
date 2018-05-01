@@ -76,7 +76,7 @@ class Request
 		xhr.setRequestHeader key, value for key, value of @info.headers
 		xhr.send serializedBody
 
-		@tk.log 'Sent (' + @info.method + ', ' + @info.url + ')', @info.body
+		@tk.log 'Sent (' + @info.method + ', ' + fullURL + ')', @info.body
 
 guts.attach callable class _RequestModule
 	constructor: (@tk) ->
