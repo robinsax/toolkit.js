@@ -192,7 +192,7 @@ class ToolkitSelection
 				if el.tag().toLowerCase() == 'select'
 					el.children 'option'
 						.attr 'selected', (gl) ->
-							if gl.attr 'value' == value then true else null
+							if (gl.attr 'value') == value then 'true' else null
 				else
 					el.first false
 						.value = value
