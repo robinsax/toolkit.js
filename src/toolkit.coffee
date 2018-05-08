@@ -194,8 +194,12 @@ Toolkit = callable class _Toolkit
 	
 	timeout: (time, callback) ->
 		id = setTimeout callback, time
-		cancel: () -> clearTimeout(id)
+		cancel: () -> clearTimeout id
 	
+	interval: (time, callback) ->
+		id = setInterval callback, time
+		cancel: () -> clearInterval id
+
 	transition: (callback) ->
 		if requestAnimationFrame
 			start = null
