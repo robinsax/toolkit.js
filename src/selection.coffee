@@ -49,7 +49,7 @@ class ToolkitSelection
 		@ith(0, wrap)
 	
 	reversed: () ->
-		set = @set.slice()
+		set = Array.prototype.slice.call(@set)
 		set.reverse()
 		new ToolkitSelection set, @
 
